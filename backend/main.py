@@ -10,6 +10,7 @@ import pandas as pd
 import numpy as np
 import joblib
 import io
+import shap  # <-- NEW: Imported SHAP
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -67,9 +68,10 @@ try:
     model_clf = joblib.load('xgb_classifier_v3.pkl')
     model_reg = joblib.load('xgb_regressor_v3.pkl')
     model_features = joblib.load('feature_cols_v3.pkl')
-    print("✅ ML Models Loaded Successfully")
+    explainer = joblib.load('shap_explainer_clf_v3.pkl') # <-- NEW: Loading Explainer
+    print("✅ ML Models & Explainer Loaded Successfully")
 except Exception as e:
-    model_clf, model_reg, model_features = None, None, None
+    model_clf, model_reg, model_features, explainer = None, None, None, None
     print(f"⚠️ ML Models failed to load: {e}")
 
 def get_risk_tier(prob):
@@ -137,8 +139,9 @@ def get_insights(student_id: int, db: Session = Depends(get_db), teacher_id: str
     
     pred_g3 = "-"
     risk_prob = student.risk_score or 0.0
+    top_10_insights = [] # <-- NEW: Initialize SHAP list
     
-    if model_reg and model_clf and model_features is not None:
+    if model_reg and model_clf and model_features is not None and explainer is not None:
         try:
             db_g1_mean = float(db.query(func.avg(models.Student.G1)).scalar() or 10.9)
             student_dict = {c.name: getattr(student, c.name) for c in student.__table__.columns}
@@ -149,8 +152,28 @@ def get_insights(student_id: int, db: Session = Depends(get_db), teacher_id: str
             
             pred_g3 = round(float(np.clip(model_reg.predict(df_final)[0], 0, 20)), 1)
             risk_prob = float(model_clf.predict_proba(df_final)[:, 1][0])
+
+            # --- NEW: SHAP Extraction Logic ---
+            shap_results = explainer.shap_values(df_final)
+            # Handle standard vs multi-class tree explainer outputs
+            shap_vals = shap_results[1][0] if isinstance(shap_results, list) and len(shap_results) > 1 else (shap_results[0][0] if isinstance(shap_results, list) else shap_results[0])
+            
+            student_record = df_final.iloc[0].to_dict()
+            for feature_name, val in zip(model_features, shap_vals):
+                if abs(val) >= 0.02: # Filter noise
+                    top_10_insights.append({
+                        "feature": feature_name,
+                        "impact_score": round(float(val), 3),
+                        "type": "Risk Driver" if val > 0 else "Protective Factor",
+                        "raw_student_value": round(float(student_record.get(feature_name, 0)), 2)
+                    })
+            
+            # Sort by absolute impact and take top 10
+            top_10_insights.sort(key=lambda x: abs(x["impact_score"]), reverse=True)
+            top_10_insights = top_10_insights[:10]
+
         except Exception as e:
-            print(f"Prediction Error in insights: {e}")
+            print(f"Prediction/SHAP Error in insights: {e}")
 
     actions = []
     if student.G1 < 10: actions.append("📚 G1 below pass - Schedule tutoring")
@@ -166,6 +189,7 @@ def get_insights(student_id: int, db: Session = Depends(get_db), teacher_id: str
             "past_failures": student.failures, "study_time_category": student.studytime,
             "social_outings_level": student.goout
         },
+        "top_10_shap_drivers": top_10_insights, # <-- NEW: Included in response
         "recommended_actions": actions
     }
 
