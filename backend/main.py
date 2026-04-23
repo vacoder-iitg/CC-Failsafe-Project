@@ -10,11 +10,11 @@ import pandas as pd
 import numpy as np
 import joblib
 import io
-import shap  # <-- NEW: Imported SHAP
+import shap
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    print("\n🚀 FAILSAFE MULTI-TENANT ENGINE STARTING...")
+    print("\n🚀 FAIL SAFE MULTI-TENANT ENGINE STARTING...")
     yield
 
 app = FastAPI(lifespan=lifespan)
@@ -33,13 +33,11 @@ def get_db():
     try: yield db
     finally: db.close()
 
-# --- THE BOUNCER (Authentication) ---
 def get_current_user_id(authorization: str = Header(None)):
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Unauthorized access")
     return authorization.split(" ")[1]
 
-# --- AUTH ROUTES ---
 class UserAuth(BaseModel):
     username: str
     password: str
@@ -63,44 +61,83 @@ def login_user(user: UserAuth, db: Session = Depends(get_db)):
         raise HTTPException(status_code=401, detail="❌ Incorrect password.")
     return {"token": db_user.username, "role": "Faculty"}
 
-# --- STABLE MODEL LOADING ---
 try:
-    model_clf = joblib.load('xgb_classifier_v3.pkl')
-    model_reg = joblib.load('xgb_regressor_v3.pkl')
-    model_features = joblib.load('feature_cols_v3.pkl')
-    explainer = joblib.load('shap_explainer_clf_v3.pkl') # <-- NEW: Loading Explainer
-    print("✅ ML Models & Explainer Loaded Successfully")
+    model_clf = joblib.load('xgb_risk_classifier.pkl')
+    model_reg = joblib.load('xgb_g3_regressor.pkl')
+    model_features = joblib.load('feature_names.pkl')
+    
+    try:
+        best_threshold = float(joblib.load('best_threshold.pkl'))
+    except Exception:
+        best_threshold = 0.5 
+        
+    explainer = shap.TreeExplainer(model_clf)
+    print(f"✅ ML Models Loaded. Features: {len(model_features)} | F1 Threshold: {best_threshold}")
 except Exception as e:
-    model_clf, model_reg, model_features, explainer = None, None, None, None
+    model_clf, model_reg, model_features, explainer, best_threshold = None, None, None, None, 0.5
     print(f"⚠️ ML Models failed to load: {e}")
 
-def get_risk_tier(prob):
-    if prob >= 0.7: return '🔴 HIGH'
-    if prob >= 0.4: return '🟡 MODERATE'
+def get_risk_tier(prob, threshold=None):
+    th = threshold if threshold else best_threshold
+    if prob >= th: return '🔴 HIGH'
+    if prob >= (th * 0.6): return '🟡 MODERATE' 
     return '🟢 LOW'
 
-def preprocess_notebook8_features(df, db_g1_mean=10.9):
-    df_model = df.copy()
-    binary_cols = ['schoolsup','famsup','paid','activities','nursery','higher','internet','romantic']
-    for col in binary_cols:
-        if col in df_model.columns:
-            df_model[col] = df_model[col].map({'yes': 1, 'no': 0, 1: 1, 0: 0}).fillna(0)
+# --- THE EXACT FEATURE ENGINEERING FROM THE IPYNB ---
+def preprocess_features(df, expected_features):
+    df_e = df.copy()
 
-    if 'school' in df_model.columns: df_model['school'] = df_model['school'].map({'GP': 0, 'MS': 1, 0: 0, 1: 1}).fillna(0)
-    if 'sex' in df_model.columns: df_model['sex'] = df_model['sex'].map({'F': 0, 'M': 1, 0: 0, 1: 1}).fillna(0)
+    for col in ['G1', 'G2']:
+        df_e[col] = pd.to_numeric(df_e[col], errors='coerce').fillna(0)
+
+    df_e['Total_Alcohol']   = df_e['Dalc'] + df_e['Walc']
+    df_e['Parent_Edu_Sum']  = df_e['Medu'] + df_e['Fedu']
+    df_e['Social_Life']     = df_e['goout'] + df_e['freetime']
+
+    for col in ['schoolsup', 'famsup', 'paid', 'activities', 'internet', 'higher', 'nursery', 'romantic']:
+        if col in df_e.columns:
+            df_e[col + '_bin'] = df_e[col].map({'yes': 1, 'no': 0}).fillna(0)
+            
+    df_e['Study_Support'] = df_e.get('schoolsup_bin', 0) + df_e.get('famsup_bin', 0) + df_e.get('paid_bin', 0)
+
+    df_e['Study_vs_Social']  = df_e['studytime'] / (df_e['Social_Life'] + 1)
+    df_e['Study_per_Absent'] = df_e['studytime'] / (df_e['absences'] + 1)
+    df_e['Support_per_Fail'] = df_e['Study_Support'] / (df_e['failures'] + 1)
+
+    df_e['Fail_Burden']    = df_e['failures'] * df_e['Total_Alcohol']
+    df_e['Health_Absence'] = df_e['health'] * df_e['absences']
+    df_e['Risk_Index']     = (df_e['failures'] * 2 + df_e['Total_Alcohol'] + df_e['absences'] / 10 + (5 - df_e['health']))
+
+    df_e['G1_norm']       = df_e['G1'] / 20.0
+    df_e['G2_norm']       = df_e['G2'] / 20.0
+    df_e['G2_G1_delta']   = df_e['G2'] - df_e['G1']
+    df_e['G_avg_P1P2']    = (df_e['G1'] + df_e['G2']) / 2.0
+    df_e['G1_below_pass'] = (df_e['G1'] < 10).astype(int)
+    df_e['G2_below_pass'] = (df_e['G2'] < 10).astype(int)
+    df_e['Both_failing']  = df_e['G1_below_pass'] * df_e['G2_below_pass']
+
+    df_e['studytime_sq']  = df_e['studytime'] ** 2
+    df_e['absences_log']  = np.log1p(df_e['absences'])
+    df_e['age_failures']  = df_e['age'] * df_e['failures']
+    df_e['parent_support'] = df_e['Parent_Edu_Sum'] * df_e['Study_Support']
+
+    drop_cols = (
+        ['G3', 'is_at_risk', 'Dalc', 'Walc', 'Medu', 'Fedu', 'goout', 'freetime'] +
+        [c for c in df_e.columns if c.endswith('_bin')]
+    )
+    df_e = df_e.drop(columns=[c for c in drop_cols if c in df_e.columns])
+
+    X_new = pd.get_dummies(df_e, drop_first=True)
+    bool_c = X_new.select_dtypes(include='bool').columns
+    X_new[bool_c] = X_new[bool_c].astype(int)
+
+    # STRICT ALIGNMENT to `feature_names.pkl`
+    df_final = pd.DataFrame(0, index=X_new.index, columns=expected_features)
+    common_cols = list(set(X_new.columns) & set(expected_features))
+    df_final[common_cols] = X_new[common_cols]
+    df_final = df_final.astype(float)
     
-    if 'G1' in df_model.columns:
-        df_model['G1'] = pd.to_numeric(df_model['G1'], errors='coerce').fillna(10)
-        df_model['G1_deviation'] = df_model['G1'] - db_g1_mean
-        df_model['G1_below_pass'] = (df_model['G1'] < 10).astype(int)
-        
-    if 'absences' in df_model.columns:
-        df_model['absences'] = pd.to_numeric(df_model['absences'], errors='coerce').fillna(0)
-        df_model['high_absence'] = (df_model['absences'] > 6).astype(int)
-        
-    return df_model
-
-# --- SECURE ROUTES ---
+    return df_final
 
 @app.get("/students/")
 def list_students(db: Session = Depends(get_db), teacher_id: str = Depends(get_current_user_id)):
@@ -113,12 +150,8 @@ def list_students(db: Session = Depends(get_db), teacher_id: str = Depends(get_c
     
     if model_reg is not None and model_clf is not None and student_list and model_features is not None:
         try:
-            db_g1_mean = float(db.query(func.avg(models.Student.G1)).scalar() or 10.9)
             df = pd.DataFrame(student_list)
-            
-            df_engineered = preprocess_notebook8_features(df, db_g1_mean)
-            df_final = df_engineered.reindex(columns=model_features, fill_value=0)
-            df_final = df_final.apply(pd.to_numeric, errors='coerce').fillna(0).astype(float)
+            df_final = preprocess_features(df, model_features)
             
             preds = np.clip(model_reg.predict(df_final), 0, 20)
             risk_probs = model_clf.predict_proba(df_final)[:, 1]
@@ -139,28 +172,23 @@ def get_insights(student_id: int, db: Session = Depends(get_db), teacher_id: str
     
     pred_g3 = "-"
     risk_prob = student.risk_score or 0.0
-    top_10_insights = [] # <-- NEW: Initialize SHAP list
+    top_10_insights = []
     
     if model_reg and model_clf and model_features is not None and explainer is not None:
         try:
-            db_g1_mean = float(db.query(func.avg(models.Student.G1)).scalar() or 10.9)
             student_dict = {c.name: getattr(student, c.name) for c in student.__table__.columns}
             
-            df_engineered = preprocess_notebook8_features(pd.DataFrame([student_dict]), db_g1_mean)
-            df_final = df_engineered.reindex(columns=model_features, fill_value=0)
-            df_final = df_final.apply(pd.to_numeric, errors='coerce').fillna(0).astype(float)
+            df_final = preprocess_features(pd.DataFrame([student_dict]), model_features)
             
             pred_g3 = round(float(np.clip(model_reg.predict(df_final)[0], 0, 20)), 1)
             risk_prob = float(model_clf.predict_proba(df_final)[:, 1][0])
 
-            # --- NEW: SHAP Extraction Logic ---
             shap_results = explainer.shap_values(df_final)
-            # Handle standard vs multi-class tree explainer outputs
             shap_vals = shap_results[1][0] if isinstance(shap_results, list) and len(shap_results) > 1 else (shap_results[0][0] if isinstance(shap_results, list) else shap_results[0])
             
             student_record = df_final.iloc[0].to_dict()
             for feature_name, val in zip(model_features, shap_vals):
-                if abs(val) >= 0.02: # Filter noise
+                if abs(val) >= 0.02: 
                     top_10_insights.append({
                         "feature": feature_name,
                         "impact_score": round(float(val), 3),
@@ -168,7 +196,6 @@ def get_insights(student_id: int, db: Session = Depends(get_db), teacher_id: str
                         "raw_student_value": round(float(student_record.get(feature_name, 0)), 2)
                     })
             
-            # Sort by absolute impact and take top 10
             top_10_insights.sort(key=lambda x: abs(x["impact_score"]), reverse=True)
             top_10_insights = top_10_insights[:10]
 
@@ -189,7 +216,7 @@ def get_insights(student_id: int, db: Session = Depends(get_db), teacher_id: str
             "past_failures": student.failures, "study_time_category": student.studytime,
             "social_outings_level": student.goout
         },
-        "top_10_shap_drivers": top_10_insights, # <-- NEW: Included in response
+        "top_10_shap_drivers": top_10_insights, 
         "recommended_actions": actions
     }
 
@@ -209,12 +236,7 @@ async def upload_csv(file: UploadFile = File(...), db: Session = Depends(get_db)
         
         scores = [0.0] * len(df)
         if model_clf and model_features is not None:
-            csv_g1_mean = df['G1'].mean() if 'G1' in df.columns else 10.9
-            
-            df_engineered = preprocess_notebook8_features(df, csv_g1_mean)
-            df_final = df_engineered.reindex(columns=model_features, fill_value=0)
-            df_final = df_final.apply(pd.to_numeric, errors='coerce').fillna(0).astype(float)
-            
+            df_final = preprocess_features(df, model_features)
             scores = model_clf.predict_proba(df_final)[:, 1]
         
         new_students = []
@@ -223,16 +245,37 @@ async def upload_csv(file: UploadFile = File(...), db: Session = Depends(get_db)
             new_student = models.Student(
                 teacher_id=teacher_id,
                 student_name=row.get('student_name', f"Student {i+1}"),
+                
+                # Demographics
                 age=int(row.get('age', 15) if pd.notna(row.get('age')) else 15),
-                G1=int(row.get('G1', 10) if pd.notna(row.get('G1')) else 10),
+                Medu=int(row.get('Medu', 2) if pd.notna(row.get('Medu')) else 2),
+                Fedu=int(row.get('Fedu', 2) if pd.notna(row.get('Fedu')) else 2),
+                
+                # Support & Extracurriculars
+                schoolsup=str(row.get('schoolsup', 'no')),
+                famsup=str(row.get('famsup', 'no')),
+                paid=str(row.get('paid', 'no')),
+                activities=str(row.get('activities', 'no')),
+                nursery=str(row.get('nursery', 'yes')),
+                higher=str(row.get('higher', 'yes')),
+                internet=str(row.get('internet', 'yes')),
+                romantic=str(row.get('romantic', 'no')),
+                
+                # Lifestyle & Health
+                freetime=int(row.get('freetime', 3) if pd.notna(row.get('freetime')) else 3),
+                goout=int(row.get('goout', 3) if pd.notna(row.get('goout')) else 3),
+                Dalc=int(row.get('Dalc', 1) if pd.notna(row.get('Dalc')) else 1),
+                Walc=int(row.get('Walc', 1) if pd.notna(row.get('Walc')) else 1),
+                health=int(row.get('health', 3) if pd.notna(row.get('health')) else 3),
+                
+                # Academics
                 absences=int(row.get('absences', 0) if pd.notna(row.get('absences')) else 0),
                 failures=int(row.get('failures', 0) if pd.notna(row.get('failures')) else 0),
                 studytime=int(row.get('studytime', 2) if pd.notna(row.get('studytime')) else 2),
-                goout=int(row.get('goout', 3) if pd.notna(row.get('goout')) else 3),
-                schoolsup=str(row.get('schoolsup', 'no')),
-                famsup=str(row.get('famsup', 'no')),
-                internet=str(row.get('internet', 'yes')),
-                health=int(row.get('health', 3) if pd.notna(row.get('health')) else 3),
+                G1=int(row.get('G1', 10) if pd.notna(row.get('G1')) else 10),
+                G2=int(row.get('G2', 10) if pd.notna(row.get('G2')) else 10),
+                
+                # Outputs
                 risk_score=score,
                 risk_category=get_risk_tier(score)
             )
