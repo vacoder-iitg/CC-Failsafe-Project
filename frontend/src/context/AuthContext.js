@@ -4,7 +4,11 @@ import React, { createContext, useState } from 'react';
 export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-    const [user, setUser] = useState(null);
+    // 1. Initialize state by checking localStorage first
+    const [user, setUser] = useState(() => {
+        const savedUser = localStorage.getItem('user');
+        return savedUser ? JSON.parse(savedUser) : null;
+    });
 
     const login = async (username, password) => {
         const response = await fetch('http://localhost:8000/login', {
@@ -16,8 +20,13 @@ export const AuthProvider = ({ children }) => {
         const data = await response.json();
         if (!response.ok) throw new Error(data.detail); 
         
-        // Save the user data to our React state
-        setUser({ username: data.token, role: data.role, token: data.token });
+        // 2. Create the user object
+        const userData = { username: data.token, role: data.role, token: data.token };
+        
+        // 3. Save to React state AND to the browser's permanent storage
+        setUser(userData);
+        localStorage.setItem('user', JSON.stringify(userData));
+        localStorage.setItem('token', data.token); // Saving token separately makes API calls easier
     };
 
     const signup = async (username, password) => {
@@ -31,11 +40,19 @@ export const AuthProvider = ({ children }) => {
         if (!response.ok) throw new Error(data.detail); 
         
         // Auto-login after successful signup
-        setUser({ username: username, role: 'Faculty', token: username });
+        const userData = { username: username, role: 'Faculty', token: username };
+        
+        // Save to React state AND to the browser's permanent storage
+        setUser(userData);
+        localStorage.setItem('user', JSON.stringify(userData));
+        localStorage.setItem('token', username);
     };
 
     const logout = () => {
+        // 4. Clear the React state AND wipe the browser's permanent storage
         setUser(null);
+        localStorage.removeItem('user');
+        localStorage.removeItem('token');
     };
 
     return (
