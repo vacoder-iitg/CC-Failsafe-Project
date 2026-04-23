@@ -5,7 +5,7 @@ from sqlalchemy.orm import declarative_base, sessionmaker
 # UPDATE THIS LINE with your actual PostgreSQL credentials:
 # Format: postgresql://username:password@localhost/database_name
 # ---------------------------------------------------------
-SQLALCHEMY_DATABASE_URL = "postgresql://shivamshah@localhost/failsafe_db" 
+SQLALCHEMY_DATABASE_URL = "postgresql://postgres:admin123@127.0.0.1:5432/failsafe_db"
 
 # The 'engine' is the actual connection to the database
 engine = create_engine(SQLALCHEMY_DATABASE_URL)
