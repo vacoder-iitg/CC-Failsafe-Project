@@ -89,14 +89,6 @@ Failsafe requires a PostgreSQL database to store users, cache heavy ML insights,
    Also make sure you also do select PostgreSQL 18 in existing server <img width="980" height="569" alt="image" src="https://github.com/user-attachments/assets/38c15998-3760-4060-b918-0992c9a26694" /> as shown in image once after all connections.
 
 
-5. *(Optional)* **Load Initial Data:**
-   If you have the `load_data.py` script and the `student-mat.csv` file ready, you can inject the data into your newly created database:
-   ```bash
-   python load_data.py
-   ```
-   Note: There is one more option in faculty portal to upload csv of student this was only for development purpose.
-
----
 
 ### Step 4: Frontend Configuration (React)
 

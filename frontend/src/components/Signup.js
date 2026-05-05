@@ -24,9 +24,9 @@ const Signup = () => {
         } catch (err) {
             // This catches the 'Username already exists' error from FastAPI
             if (err.response && err.response.status === 400) {
-                setError("⚠️ This username is already taken. Please try another.");
+                setError(" This username is already taken. Please try another.");
             } else {
-                setError("⚠️ Something went wrong. Please try again later.");
+                setError(" Something went wrong. Please try again later.");
             }
         }
     };

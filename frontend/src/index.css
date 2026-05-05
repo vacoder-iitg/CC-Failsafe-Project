@@ -11,3 +11,385 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
+
+/* ==========================================================================
+   GLOBAL APP STYLES & INTERACTIVE UI CLASSES
+   ========================================================================== */
+
+/* ─── Sidebar Navigation Buttons ─── */
+.sidebar-nav-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 11px 14px;
+  margin-bottom: 4px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  cursor: pointer;
+  color: rgba(255, 255, 255, 0.55);
+  font-weight: 500;
+  font-size: 14px;
+  text-align: left;
+  transition: all 0.15s;
+}
+
+.sidebar-nav-btn:hover {
+  background: rgba(255, 255, 255, 0.07);
+  color: white;
+}
+
+.sidebar-nav-btn.active {
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: white;
+  font-weight: 700;
+}
+
+/* ─── Logout Buttons ─── */
+.logout-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 8px;
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 8px;
+  cursor: pointer;
+  color: #fca5a5;
+  font-weight: 600;
+  font-size: 12px;
+  transition: all 0.15s;
+}
+
+.logout-btn:hover {
+  background: rgba(239, 68, 68, 0.3);
+}
+
+/* ─── Student Vault Table ─── */
+.vault-table th {
+  padding: 12px 16px;
+  border-bottom: 2px solid #e5e7eb;
+  background-color: #f3f4f6;
+  font-weight: bold;
+  white-space: nowrap;
+}
+
+.vault-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid #e5e7eb;
+  white-space: nowrap;
+}
+
+.vault-table tr {
+  transition: background-color 0.2s;
+}
+
+.vault-table tr:hover {
+  background-color: #f9fafb !important;
+}
+
+/* ─── Student Profile UI ─── */
+.profile-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background-color: white;
+  color: #4b5563;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  cursor: pointer;
+  margin-bottom: 20px;
+  font-weight: 700;
+  font-size: 13px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  transition: all 0.15s;
+}
+
+.profile-btn:hover {
+  background-color: #f9fafb;
+  color: #1f2937;
+}
+
+.stat-card {
+  background-color: #f9fafb;
+  padding: 15px;
+  border-radius: 6px;
+  border: 1px solid #e5e7eb;
+}
+
+.stat-card.risk {
+  border-color: #fca5a5;
+  background-color: #fef2f2;
+}
+
+.stat-card.safe {
+  border-color: #bbf7d0;
+  background-color: #f0fdf4;
+}
+
+.stat-card-title {
+  display: block;
+  font-size: 12px;
+  color: #6b7280;
+  font-weight: bold;
+  margin-bottom: 4px;
+}
+
+.stat-card-val {
+  font-size: 20px;
+  font-weight: bold;
+  color: #1f2937;
+}
+
+/* ─── Deep AI Analysis Loader ─── */
+.loader-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  font-family: 'Inter', sans-serif;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  text-align: center;
+  padding: 20px;
+}
+
+.loader-card {
+  background: white;
+  padding: 40px;
+  border-radius: 24px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 400px;
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.8);
+}
+
+.loader-card img {
+  width: 240px;
+  height: auto;
+  margin-bottom: 24px;
+  border-radius: 16px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.loader-card h2 {
+  margin: 0 0 12px;
+  color: #1e293b;
+  font-size: 24px;
+  font-weight: 800;
+}
+
+.loader-card p {
+  margin: 0;
+  color: #64748b;
+  font-size: 15px;
+  line-height: 1.5;
+  font-weight: 500;
+}
+
+.loader-bar {
+  margin-top: 24px;
+  width: 100%;
+  height: 4px;
+  background-color: #f1f5f9;
+  border-radius: 2px;
+  overflow: hidden;
+  position: relative;
+}
+
+.loader-fill {
+  width: 40%;
+  height: 100%;
+  background-color: #6366f1;
+  border-radius: 2px;
+  animation: loadingBar 1.5s infinite ease-in-out;
+}
+
+@keyframes loadingBar {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(250%); }
+}
+
+/* ─── TakeAction Student Cards ─── */
+.action-student-card {
+  background-color: white;
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+  transition: box-shadow 0.2s;
+}
+
+.action-student-card:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+}
+
+.action-student-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 20px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.action-student-header:hover {
+  background-color: #fafbff;
+}
+
+.profile-quick-link-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #6366f1;
+  background-color: #eef2ff;
+  border: 1px solid #c7d2fe;
+  border-radius: 7px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.profile-quick-link-btn:hover {
+  background-color: #6366f1;
+  color: white;
+}
+
+/* ─── Metric Trend Buttons ─── */
+.metric-trend-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  width: fit-content;
+}
+
+.metric-trend-btn.inactive {
+  color: #4b5563;
+  background-color: #f3f4f6;
+  border: 1px solid #e5e7eb;
+}
+
+.metric-trend-btn.inactive:hover {
+  background-color: #e5e7eb !important;
+}
+
+/* ─── HOD Actions Feedback Buttons ─── */
+.feedback-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 14px;
+  font-size: 12px;
+  font-weight: 700;
+  border-radius: 8px;
+  transition: all 0.15s;
+}
+
+.feedback-btn:disabled {
+  color: #9ca3af !important;
+  background-color: #f3f4f6 !important;
+  border: 1px solid #e5e7eb !important;
+  cursor: default;
+}
+
+.feedback-btn.good_work {
+  color: #10b981;
+  background-color: #ecfdf5;
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  cursor: pointer;
+}
+
+.feedback-btn.good_work:hover {
+  background-color: #10b981;
+  color: white;
+}
+
+.feedback-btn.take_action {
+  color: #ef4444;
+  background-color: #fef2f2;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  cursor: pointer;
+}
+
+.feedback-btn.take_action:hover {
+  background-color: #ef4444;
+  color: white;
+}
+
+.feedback-btn.needs_improvement {
+  color: #f59e0b;
+  background-color: #fffbeb;
+  border: 1px solid rgba(245, 158, 11, 0.2);
+  cursor: pointer;
+}
+
+.feedback-btn.needs_improvement:hover {
+  background-color: #f59e0b;
+  color: white;
+}
+
+.feedback-btn.schedule_meeting {
+  color: #6366f1;
+  background-color: #eef2ff;
+  border: 1px solid rgba(99, 102, 241, 0.2);
+  cursor: pointer;
+}
+
+.feedback-btn.schedule_meeting:hover {
+  background-color: #6366f1;
+  color: white;
+}
+
+/* ─── AuthPage Back Button ─── */
+.auth-back-btn {
+  position: absolute;
+  top: 24px;
+  left: 24px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: none;
+  color: #64748b;
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 8px;
+  transition: all 0.2s;
+}
+
+.auth-back-btn:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+  color: #1e293b;
+}
+
+/* ─── AuthPage Submit Button ─── */
+.auth-submit-btn {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.auth-submit-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  opacity: 0.95;
+}
+
+.auth-submit-btn:active:not(:disabled) {
+  transform: scale(0.98);
+}

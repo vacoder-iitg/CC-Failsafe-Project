@@ -4,7 +4,7 @@ import models
 
 # In-memory cache for ultra-fast tab switching during a single session
 INSIGHTS_CACHE = {}
-DECISION_PLOT_CACHE = {}
+
 
 def get_db_cache(db: Session, teacher_id: str, cache_key: str):
     cached = db.query(models.MLCache).filter(
@@ -34,9 +34,7 @@ def set_db_cache(db: Session, teacher_id: str, cache_key: str, data: dict):
 def clear_teacher_cache(db: Session, teacher_id: str):
     if teacher_id in INSIGHTS_CACHE:
         del INSIGHTS_CACHE[teacher_id]
-    keys_to_delete = [k for k in list(DECISION_PLOT_CACHE.keys()) if k.startswith(f"{teacher_id}_")]
-    for k in keys_to_delete:
-        del DECISION_PLOT_CACHE[k]
+
     db.query(models.MLCache).filter(models.MLCache.teacher_id == teacher_id).delete()
     db.commit()
 

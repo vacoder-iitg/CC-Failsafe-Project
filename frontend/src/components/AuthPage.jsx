@@ -84,25 +84,7 @@ const AuthPage = () => {
 
                 <button
                     onClick={() => navigate('/')}
-                    style={{
-                        position: 'absolute',
-                        top: '24px',
-                        left: '24px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '4px',
-                        background: 'none',
-                        border: 'none',
-                        color: '#64748b',
-                        fontWeight: '700',
-                        fontSize: '13px',
-                        cursor: 'pointer',
-                        padding: '8px',
-                        borderRadius: '8px',
-                        transition: 'all 0.2s'
-                    }}
-                    onMouseEnter={e => { e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.05)'; e.currentTarget.style.color = '#1e293b'; }}
-                    onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = '#64748b'; }}
+                    className="auth-back-btn"
                 >
                     <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>arrow_back</span>
                     Back
@@ -237,6 +219,7 @@ const AuthPage = () => {
                     <button
                         type="submit"
                         disabled={loading}
+                        className="auth-submit-btn"
                         style={{
                             padding: '16px',
                             marginTop: '10px',
@@ -247,13 +230,8 @@ const AuthPage = () => {
                             cursor: loading ? 'not-allowed' : 'pointer',
                             fontWeight: '800',
                             fontSize: '16px',
-                            boxShadow: `0 12px 20px -5px ${isHod ? 'rgba(245,158,11,0.4)' : 'rgba(99,102,241,0.4)'}`,
-                            transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
+                            boxShadow: `0 12px 20px -5px ${isHod ? 'rgba(245,158,11,0.4)' : 'rgba(99,102,241,0.4)'}`
                         }}
-                        onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.opacity = '0.95'; }}
-                        onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.opacity = '1'; }}
-                        onMouseDown={e => e.currentTarget.style.transform = 'scale(0.98)'}
-                        onMouseUp={e => e.currentTarget.style.transform = 'scale(1)'}
                     >
                         {loading ? 'Processing...' : (isLoginMode ? 'Secure Login' : 'Create Account')}
                     </button>

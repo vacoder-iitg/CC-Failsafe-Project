@@ -22,7 +22,7 @@ from ml_utils import (
 )
 
 from cache_utils import (
-    INSIGHTS_CACHE, DECISION_PLOT_CACHE, 
+    INSIGHTS_CACHE, 
     get_db_cache, set_db_cache
 )
 
@@ -51,7 +51,6 @@ def get_class_insights(db: Session = Depends(get_db), teacher_id: str = Depends(
     
     avg_pred_g3 = 0
     shap_graph_base64 = None
-    decision_plot_base64 = None
     metric_plots = {}
     engineered_metrics = {}
     
@@ -119,196 +118,18 @@ def get_class_insights(db: Session = Depends(get_db), teacher_id: str = Depends(
                 shap_graph_base64 = base64.b64encode(buf.read()).decode('utf-8')
                 plt.close()
 
-            # --- SHAP Decision Plot is now dynamically fetched via /class/decision-plot endpoint ---
-
         except Exception as e:
             print(f"Error in class insights: {e}")
 
     result = {
         "avg_g1": avg_g1, "avg_g2": avg_g2, "avg_pred_g3": avg_pred_g3, "avg_absences": avg_absences,
-        "engineered_metrics": engineered_metrics, "shap_graph_base64": shap_graph_base64,
-        "decision_plot_base64": decision_plot_base64
+        "engineered_metrics": engineered_metrics, "shap_graph_base64": shap_graph_base64
     }
     set_db_cache(db, teacher_id, "insights", result)
     INSIGHTS_CACHE[teacher_id] = result
     return result
 
-@router.get("/class/decision-plot")
-def get_filtered_decision_plot(
-    mode: str = "all",          # all | high | moderate | low | student
-    student_num: Optional[int] = None,
-    db: Session = Depends(get_db),
-    teacher_id: str = Depends(get_current_user_id)
-):
-    cache_key = f"{teacher_id}_{mode}_{student_num}"
-    
-    # 1. Check In-Memory Cache
-    if cache_key in DECISION_PLOT_CACHE:
-        return DECISION_PLOT_CACHE[cache_key]
-        
-    # 2. Check PostgreSQL Cache
-    db_cached = get_db_cache(db, teacher_id, f"dp_{mode}_{student_num}")
-    if db_cached:
-        DECISION_PLOT_CACHE[cache_key] = db_cached
-        return db_cached
 
-    if not model_clf or model_features is None or explainer is None:
-        return {"plot": None, "title": "", "count": 0}
-
-    all_students = db.query(models.Student).filter(models.Student.teacher_id == teacher_id).all()
-
-    if not all_students:
-        return {"plot": None, "title": "No students", "count": 0}
-
-    # --- Filter / sort students by mode ---
-    filtered = []
-    if mode == "student":
-        if student_num is None:
-            return {"plot": None, "title": "No student number provided", "count": 0}
-        target_name = f"Student {student_num}"
-        filtered = [s for s in all_students if s.student_name == target_name]
-        if not filtered:
-            return {"plot": None, "title": f"Student {student_num} not found", "count": 0}
-        title = f"SHAP Decision Plot — {target_name}"
-    elif mode == "high":
-        # Get students who are truly HIGH risk, up to 50
-        tier_matches = [s for s in all_students if get_risk_tier(s.risk_score or 0) == 'HIGH']
-        filtered = sorted(tier_matches, key=lambda s: s.risk_score or 0, reverse=True)[:50]
-        title = f"SHAP Decision Plot — {len(filtered)} High Risk Students"
-    elif mode == "moderate":
-        # Get students who are truly MODERATE risk, up to 50
-        tier_matches = [s for s in all_students if get_risk_tier(s.risk_score or 0) == 'MODERATE']
-        filtered = sorted(tier_matches, key=lambda s: s.risk_score or 0, reverse=True)[:50]
-        title = f"SHAP Decision Plot — {len(filtered)} Moderate Risk Students"
-    elif mode == "low":
-        # Get students who are truly LOW risk, up to 50
-        tier_matches = [s for s in all_students if get_risk_tier(s.risk_score or 0) == 'LOW']
-        filtered = sorted(tier_matches, key=lambda s: s.risk_score or 0)[:50]
-        title = f"SHAP Decision Plot — {len(filtered)} Low Risk Students"
-    else:  # all
-        sorted_s = sorted(all_students, key=lambda s: s.risk_score or 0, reverse=True)
-        filtered = sorted_s[:50]
-        title = f"SHAP Decision Plot — Top {len(filtered)} Students by Risk"
-
-    if not filtered:
-        # Fallback for 'high' mode if empty: don't show moderate, just report empty
-        category_label = mode.capitalize()
-        return {"plot": None, "title": f"No students currently categorized as '{category_label}' risk.", "count": 0}
-
-
-    try:
-        student_list = [{c.name: getattr(s, c.name) for c in s.__table__.columns} for s in filtered]
-        df = pd.DataFrame(student_list)
-        df_final = preprocess_features(df, model_features)
-
-        shap_results = explainer.shap_values(df_final)
-        if isinstance(shap_results, list) and len(shap_results) > 1:
-            shap_matrix = shap_results[1]
-        elif isinstance(shap_results, list):
-            shap_matrix = shap_results[0]
-        else:
-            shap_matrix = shap_results
-
-        expected_value = explainer.expected_value
-        if isinstance(expected_value, (list, np.ndarray)):
-            expected_value = float(expected_value[1]) if len(expected_value) > 1 else float(expected_value[0])
-        else:
-            expected_value = float(expected_value)
-
-        feature_names_friendly = [FEATURE_LABELS.get(f, f) for f in model_features]
-
-        # Colour-code lines by risk tier
-        risk_scores = [s.risk_score or 0 for s in filtered]
-        line_colors = ['#ef4444' if get_risk_tier(r) == 'HIGH'
-                       else '#f59e0b' if get_risk_tier(r) == 'MODERATE'
-                       else '#10b981' for r in risk_scores]
-
-        is_single = (mode == 'student' and len(filtered) == 1)
-
-        with plt_lock:
-            # Dynamic height based on student count (min 7, approx 0.2 per student)
-            plot_height = max(7, len(filtered) * 0.2 + 2)
-            fig, ax = plt.subplots(figsize=(11, plot_height))
-            
-            shap.decision_plot(
-                expected_value,
-                shap_matrix,
-                feature_names=feature_names_friendly,
-                show=False,
-                highlight=None,
-                plot_color='RdBu',
-                auto_size_plot=False,
-               
-            )
-                   # ── Post-process: recolour every SHAP polyline by risk tier ──────────
-            # shap.decision_plot uses RdBu; near-zero values render almost white.
-            # We grab all drawn Line2D objects and recolour them ourselves.
-            data_lines = [l for l in ax.get_lines() if len(l.get_xdata()) > 3]
-            for idx, line in enumerate(data_lines):
-                if idx < len(line_colors):
-                    line.set_color(line_colors[idx])
-                    line.set_linewidth(3.5 if is_single else 1.6)
-                    line.set_alpha(1.0 if is_single else 0.75)
-
-            # ── Single-student: annotation card + plain-English legend ───────────
-            if is_single:
-                risk_prob  = risk_scores[0]
-                risk_tier  = get_risk_tier(risk_prob)
-                tier_color = {'HIGH': '#ef4444', 'MODERATE': '#f59e0b', 'LOW': '#10b981'}[risk_tier]
-                tier_label = {'HIGH': '⚠  HIGH RISK', 'MODERATE': '~  MODERATE RISK', 'LOW': '✓  LOW RISK'}[risk_tier]
-                interp     = {
-                    'HIGH':     'Several features are pushing risk upward.\nImmediate academic support is recommended.',
-                    'MODERATE': 'Some risk factors detected. Monitor closely\nand consider early intervention.',
-                    'LOW':      'Mostly protective factors present.\nContinue current support strategies.',
-                }[risk_tier]
-                card = f"  {tier_label}  \n  Risk Probability: {risk_prob * 100:.1f}%  \n\n  {interp}  "
-                ax.text(
-                    0.985, 0.015, card,
-                    transform=ax.transAxes,
-                    fontsize=9.5, verticalalignment='bottom', horizontalalignment='right',
-                    multialignment='left',
-                    bbox=dict(boxstyle='round,pad=0.6', facecolor=tier_color,
-                               alpha=0.13, edgecolor=tier_color, linewidth=1.8),
-                    color='#1f2937',
-                )
-                from matplotlib.lines import Line2D
-                ax.legend(
-                    handles=[
-                        Line2D([0], [0], color=tier_color, linewidth=3,
-                                label=f"Student path — {risk_tier} risk"),
-                        Line2D([0], [0], color='gray', linewidth=1, linestyle='--',
-                                label='Base rate (model average)'),
-                    ],
-                    loc='upper left', fontsize=9, framealpha=0.88, edgecolor='#d1d5db'
-                )
-            else:
-                from matplotlib.lines import Line2D
-                ax.legend(
-                    handles=[
-                        Line2D([0], [0], color='#ef4444', linewidth=2.5, label='High Risk'),
-                        Line2D([0], [0], color='#f59e0b', linewidth=2.5, label='Moderate Risk'),
-                        Line2D([0], [0], color='#10b981', linewidth=2.5, label='Low Risk'),
-                    ],
-                    loc='upper left', fontsize=9, framealpha=0.88, edgecolor='#d1d5db'
-                )
-
-            ax.set_title(title, fontsize=12, fontweight='bold', color='#1f2937', pad=12)
-            fig.tight_layout()
-
-            buf = io.BytesIO()
-            fig.savefig(buf, format='png', bbox_inches='tight', dpi=110)
-            buf.seek(0)
-            plot_b64 = base64.b64encode(buf.read()).decode('utf-8')
-            plt.close(fig)
-        
-        result = {"plot": plot_b64, "title": title, "count": len(filtered)}
-        set_db_cache(db, teacher_id, f"dp_{mode}_{student_num}", result)
-        DECISION_PLOT_CACHE[cache_key] = result
-        return result
-
-    except Exception as e:
-        print(f"Filtered decision plot error ({mode}): {e}")
-        return {"plot": None, "title": str(e), "count": 0}
 
 METRIC_PLOT_CONFIG = {
     'Risk_Index':     {'label': 'Risk Index',         'color': '#ef4444'},

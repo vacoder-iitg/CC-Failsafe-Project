@@ -42,10 +42,7 @@ const FacultyData = ({ facultyList, user }) => {
                     const riskColor = t.avg_risk_pct > 50 ? '#ef4444' : t.avg_risk_pct > 30 ? '#f59e0b' : '#10b981';
                     return (
                         <div key={t.teacher_name} style={{ backgroundColor: 'white', borderRadius: '10px', border: '1px solid #e5e7eb', borderLeft: `4px solid ${riskColor}`, overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.05)' }}>
-                            <div onClick={() => setExpandedFaculty(isExp ? null : t.teacher_name)} style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '16px 20px', cursor: 'pointer' }}
-                                onMouseEnter={e => e.currentTarget.style.backgroundColor = '#fafbff'}
-                                onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
-                            >
+                            <div onClick={() => setExpandedFaculty(isExp ? null : t.teacher_name)} className="action-student-header">
                                 <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: `linear-gradient(135deg,${riskColor}33,${riskColor}11)`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                     <span className="material-symbols-outlined" style={{ fontSize: '22px', color: riskColor }}>person</span>
                                 </div>
@@ -93,17 +90,7 @@ const FacultyData = ({ facultyList, user }) => {
                                                         key={action.key}
                                                         disabled={sent}
                                                         onClick={() => sendHodMessage(t.teacher_name, action.key, action.label, action.desc)}
-                                                        style={{
-                                                            display: 'flex', alignItems: 'center', gap: '5px',
-                                                            padding: '7px 14px', fontSize: '12px', fontWeight: '700',
-                                                            color: sent ? '#9ca3af' : action.color,
-                                                            backgroundColor: sent ? '#f3f4f6' : action.bg,
-                                                            border: `1px solid ${sent ? '#e5e7eb' : action.color + '33'}`,
-                                                            borderRadius: '8px', cursor: sent ? 'default' : 'pointer',
-                                                            transition: 'all 0.15s'
-                                                        }}
-                                                        onMouseEnter={e => { if (!sent) { e.currentTarget.style.backgroundColor = action.color; e.currentTarget.style.color = 'white'; } }}
-                                                        onMouseLeave={e => { if (!sent) { e.currentTarget.style.backgroundColor = action.bg; e.currentTarget.style.color = action.color; } }}
+                                                        className={`feedback-btn ${action.key}`}
                                                     >
                                                         <span className="material-symbols-outlined" style={{ fontSize: '15px' }}>{sent ? 'check' : action.icon}</span>
                                                         {sent ? 'Sent!' : action.label}

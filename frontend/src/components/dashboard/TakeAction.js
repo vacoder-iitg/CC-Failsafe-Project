@@ -1,10 +1,7 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-const StudentActionCard = React.memo(({ s, actions, isExpanded, onToggleExpand, completedStr, markActionDone, navigate }) => {
-    // OPTIMISTIC UI STATE: Tracks clicks instantly before the backend/parent state catches up
-    const [localDone, setLocalDone] = useState({});
-
+const StudentActionCard = React.memo(({ s, actions, isExpanded, onToggleExpand, navigate }) => {
     const isHigh = s.risk_category === 'HIGH';
     const isMod = s.risk_category === 'MODERATE';
     const riskColor = isHigh ? '#ef4444' : isMod ? '#f59e0b' : '#10b981';
@@ -13,25 +10,14 @@ const StudentActionCard = React.memo(({ s, actions, isExpanded, onToggleExpand, 
     const highPriorityCount = actions.filter(a => a.priority === 'high').length;
 
     return (
-        <div style={{
-            backgroundColor: 'white', borderRadius: '10px',
-            border: '1px solid #e5e7eb', borderLeft: `4px solid ${riskColor}`,
-            boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
-            overflow: 'hidden', transition: 'box-shadow 0.2s'
-        }}
-            onMouseEnter={e => e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.08)'}
-            onMouseLeave={e => e.currentTarget.style.boxShadow = '0 1px 4px rgba(0,0,0,0.05)'}
+        <div 
+            className="action-student-card" 
+            style={{ borderLeft: `4px solid ${riskColor}` }}
         >
             {/* Student header row — always visible */}
             <div
                 onClick={() => onToggleExpand(s.id)}
-                style={{
-                    display: 'flex', alignItems: 'center', gap: '16px',
-                    padding: '14px 20px', cursor: 'pointer',
-                    transition: 'background 0.15s'
-                }}
-                onMouseEnter={e => e.currentTarget.style.backgroundColor = '#fafbff'}
-                onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+                className="action-student-header"
             >
                 {/* Name + Risk */}
                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -84,66 +70,27 @@ const StudentActionCard = React.memo(({ s, actions, isExpanded, onToggleExpand, 
             {isExpanded && (
                 <div style={{ padding: '0 20px 18px', borderTop: '1px solid #f1f5f9' }}>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '10px', marginTop: '14px' }}>
-                        {actions.map((a, i) => {
-                            // If it's globally done OR locally clicked just now, show it as Done instantly.
-                            const isDone = completedStr[i] === '1' || localDone[i];
-
-                            return (
-                                <div key={i} style={{
-                                    display: 'flex', alignItems: 'flex-start', gap: '10px',
-                                    padding: '12px 14px', backgroundColor: isDone ? '#f0fdf4' : a.bg,
-                                    borderRadius: '8px', border: `1px solid ${isDone ? '#86efac' : a.color + '22'}`,
-                                    opacity: isDone ? 0.7 : 1, transition: 'all 0.2s'
-                                }}>
-                                    <span className="material-symbols-outlined" style={{ fontSize: '20px', color: isDone ? '#10b981' : a.color, flexShrink: 0, marginTop: '1px' }}>{isDone ? 'check_circle' : a.icon}</span>
-                                    <div style={{ flex: 1 }}>
-                                        <div style={{ fontWeight: '700', fontSize: '13px', color: isDone ? '#6b7280' : '#111827', marginBottom: '2px', textDecoration: isDone ? 'line-through' : 'none' }}>{a.label}</div>
-                                        <div style={{ fontSize: '12px', color: '#4b5563', lineHeight: '1.4' }}>{a.desc}</div>
-                                    </div>
-                                    {!isDone && a.priority !== 'ok' && (
-                                        <button
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                // 1. Instantly update the UI locally to remove lag
-                                                setLocalDone(prev => ({ ...prev, [i]: true }));
-                                                // 2. Fire off the backend/parent sync in the background
-                                                markActionDone(s.id, s.student_name, a.label, a.desc, i);
-                                            }}
-                                            style={{
-                                                flexShrink: 0, padding: '4px 10px',
-                                                backgroundColor: '#10b981', color: 'white',
-                                                border: 'none', borderRadius: '6px',
-                                                fontSize: '11px', fontWeight: '700',
-                                                cursor: 'pointer', whiteSpace: 'nowrap',
-                                                transition: 'opacity 0.15s'
-                                            }}
-                                            onMouseEnter={e => e.currentTarget.style.opacity = '0.8'}
-                                            onMouseLeave={e => e.currentTarget.style.opacity = '1'}
-                                        >
-                                            Mark Done
-                                        </button>
-                                    )}
-                                    {isDone && (
-                                        <span style={{ flexShrink: 0, fontSize: '11px', fontWeight: '700', color: '#10b981' }}>Done ✓</span>
-                                    )}
+                        {actions.map((a, i) => (
+                            <div key={i} style={{
+                                display: 'flex', alignItems: 'flex-start', gap: '10px',
+                                padding: '12px 14px', backgroundColor: a.bg,
+                                borderRadius: '8px', border: `1px solid ${a.color + '22'}`,
+                                transition: 'all 0.2s'
+                            }}>
+                                <span className="material-symbols-outlined" style={{ fontSize: '20px', color: a.color, flexShrink: 0, marginTop: '1px' }}>{a.icon}</span>
+                                <div style={{ flex: 1 }}>
+                                    <div style={{ fontWeight: '700', fontSize: '13px', color: '#111827', marginBottom: '2px' }}>{a.label}</div>
+                                    <div style={{ fontSize: '12px', color: '#4b5563', lineHeight: '1.4' }}>{a.desc}</div>
                                 </div>
-                            );
-                        })}
+                            </div>
+                        ))}
                     </div>
 
                     {/* Quick link */}
                     <div style={{ marginTop: '12px', textAlign: 'right' }}>
                         <button
                             onClick={(e) => { e.stopPropagation(); navigate(`/student/${s.id}`); }}
-                            style={{
-                                display: 'inline-flex', alignItems: 'center', gap: '5px',
-                                padding: '6px 14px', fontSize: '12px', fontWeight: '700',
-                                color: '#6366f1', backgroundColor: '#eef2ff',
-                                border: '1px solid #c7d2fe', borderRadius: '7px',
-                                cursor: 'pointer', transition: 'all 0.15s'
-                            }}
-                            onMouseEnter={e => { e.currentTarget.style.backgroundColor = '#6366f1'; e.currentTarget.style.color = 'white'; }}
-                            onMouseLeave={e => { e.currentTarget.style.backgroundColor = '#eef2ff'; e.currentTarget.style.color = '#6366f1'; }}
+                            className="profile-quick-link-btn"
                         >
                             <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>open_in_new</span>
                             Full Student Profile
@@ -154,13 +101,10 @@ const StudentActionCard = React.memo(({ s, actions, isExpanded, onToggleExpand, 
         </div>
     );
 }, (prev, next) => {
-    return prev.isExpanded === next.isExpanded &&
-        prev.completedStr === next.completedStr &&
-        prev.s === next.s;
+    return prev.isExpanded === next.isExpanded && prev.s === next.s;
 });
 
-// We also wrap the main TakeAction container in React.memo
-const TakeAction = React.memo(({ students, loading, completedActions, markActionDone }) => {
+const TakeAction = React.memo(({ students, loading }) => {
     const navigate = useNavigate();
     const [expandedStudent, setExpandedStudent] = useState(null);
 
@@ -216,22 +160,16 @@ const TakeAction = React.memo(({ students, loading, completedActions, markAction
                 </div>
             ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                    {processedStudents.map(s => {
-                        const completedStr = s.actions.map((_, i) => completedActions.has(`${s.id}_${i}`) ? '1' : '0').join('');
-
-                        return (
-                            <StudentActionCard
-                                key={s.id}
-                                s={s}
-                                actions={s.actions}
-                                isExpanded={expandedStudent === s.id}
-                                onToggleExpand={handleToggleExpand}
-                                completedStr={completedStr}
-                                markActionDone={markActionDone}
-                                navigate={navigate}
-                            />
-                        );
-                    })}
+                    {processedStudents.map(s => (
+                        <StudentActionCard
+                            key={s.id}
+                            s={s}
+                            actions={s.actions}
+                            isExpanded={expandedStudent === s.id}
+                            onToggleExpand={handleToggleExpand}
+                            navigate={navigate}
+                        />
+                    ))}
                 </div>
             )}
         </div>

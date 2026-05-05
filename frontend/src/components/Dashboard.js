@@ -18,49 +18,14 @@ const Dashboard = () => {
 
     useEffect(() => { localStorage.setItem('failsafe_page', activePage); }, [activePage]);
 
-    const [notifications, setNotifications] = useState(() => {
-        try {
-            const saved = localStorage.getItem('failsafe_notifications');
-            if (saved) return JSON.parse(saved).map(n => ({ ...n, timestamp: new Date(n.timestamp) }));
-        } catch (e) { }
-        return [];
-    });
-    const [completedActions, setCompletedActions] = useState(() => {
-        try {
-            const saved = localStorage.getItem('failsafe_completed');
-            if (saved) return new Set(JSON.parse(saved));
-        } catch (e) { }
-        return new Set();
-    });
+    const [hodCount, setHodCount] = useState(0);
 
     useEffect(() => {
-        localStorage.setItem('failsafe_notifications', JSON.stringify(notifications));
-    }, [notifications]);
-
-    useEffect(() => {
-        localStorage.setItem('failsafe_completed', JSON.stringify([...completedActions]));
-    }, [completedActions]);
-
-    const markActionDone = (studentId, studentName, actionLabel, actionDesc, actionIdx) => {
-        const key = `${studentId}_${actionIdx}`;
-        if (completedActions.has(key)) return;
-        setCompletedActions(prev => new Set(prev).add(key));
-        setNotifications(prev => [{
-            id: Date.now(),
-            studentName,
-            actionLabel,
-            actionDesc,
-            facultyName: user?.username || 'Unknown',
-            timestamp: new Date(),
-            read: false
-        }, ...prev]);
-    };
-
-    const unreadCount = notifications.filter(n => !n.read).length;
-
-    const markAllRead = () => {
-        setNotifications(prev => prev.map(n => ({ ...n, read: true })));
-    };
+        if (!user) return;
+        const msgs = JSON.parse(localStorage.getItem('failsafe_hod_messages') || '[]')
+            .filter(m => m.toTeacher === user.username);
+        setHodCount(msgs.length);
+    }, [user, activePage]);
 
     const fetchStudents = () => {
         setLoading(true);
@@ -108,6 +73,7 @@ const Dashboard = () => {
     return (
         <div style={{ display: 'flex', minHeight: '100vh', fontFamily: "'Inter','Segoe UI',sans-serif" }}>
 
+
             {/* ─── Vertical Sidebar ─── */}
             <div style={{
                 width: '220px', flexShrink: 0,
@@ -134,24 +100,12 @@ const Dashboard = () => {
                     {[
                         { key: 'dashboard', icon: 'dashboard', label: 'Dashboard' },
                         { key: 'takeaction', icon: 'bolt', label: 'Take Action' },
-                        { key: 'notifications', icon: 'notifications', label: 'Notifications', badge: unreadCount > 0 ? unreadCount : null },
+                        { key: 'notifications', icon: 'notifications', label: 'Notifications', badge: hodCount > 0 ? hodCount : null },
                     ].map(item => (
                         <button
                             key={item.key}
                             onClick={() => setActivePage(item.key)}
-                            style={{
-                                width: '100%', display: 'flex', alignItems: 'center', gap: '11px',
-                                padding: '11px 14px', marginBottom: '4px',
-                                background: activePage === item.key ? 'rgba(255,255,255,0.12)' : 'transparent',
-                                border: activePage === item.key ? '1px solid rgba(255,255,255,0.15)' : '1px solid transparent',
-                                borderRadius: '9px', cursor: 'pointer',
-                                color: activePage === item.key ? 'white' : 'rgba(255,255,255,0.55)',
-                                fontWeight: activePage === item.key ? '700' : '500',
-                                fontSize: '14px', textAlign: 'left',
-                                transition: 'all 0.15s'
-                            }}
-                            onMouseEnter={e => { if (activePage !== item.key) { e.currentTarget.style.background = 'rgba(255,255,255,0.07)'; e.currentTarget.style.color = 'white'; } }}
-                            onMouseLeave={e => { if (activePage !== item.key) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(255,255,255,0.55)'; } }}
+                            className={`sidebar-nav-btn ${activePage === item.key ? 'active' : ''}`}
                         >
                             <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>{item.icon}</span>
                             {item.label}
@@ -175,17 +129,7 @@ const Dashboard = () => {
                             <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '10px' }}>Faculty</div>
                         </div>
                     </div>
-                    <button
-                        onClick={logout}
-                        style={{
-                            width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '7px',
-                            padding: '8px', background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)',
-                            borderRadius: '8px', cursor: 'pointer', color: '#fca5a5', fontWeight: '600', fontSize: '12px',
-                            transition: 'all 0.15s'
-                        }}
-                        onMouseEnter={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.3)'; }}
-                        onMouseLeave={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.15)'; }}
-                    >
+                    <button onClick={logout} className="logout-btn">
                         <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>logout</span>
                         Logout
                     </button>
@@ -207,15 +151,10 @@ const Dashboard = () => {
                     <TakeAction
                         students={students}
                         loading={loading}
-                        completedActions={completedActions}
-                        markActionDone={markActionDone}
                     />
                 )}
                 {activePage === 'notifications' && (
                     <Notifications
-                        notifications={notifications}
-                        unreadCount={unreadCount}
-                        markAllRead={markAllRead}
                         user={user}
                     />
                 )}

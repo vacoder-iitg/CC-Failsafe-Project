@@ -137,17 +137,12 @@ const ClassOverview = ({ classInsights, loadingInsights, user }) => {
                                         <div>
                                             <button
                                                 onClick={() => handleTrendToggle(key, user?.token)}
-                                                style={{
-                                                    display: 'flex', alignItems: 'center', gap: '6px',
-                                                    padding: '8px 16px', fontSize: '13px', fontWeight: '600',
-                                                    color: isActive ? cfg.color : '#4b5563',
-                                                    backgroundColor: isActive ? cfg.bg : '#f3f4f6',
-                                                    border: `1px solid ${isActive ? cfg.color : '#e5e7eb'}`,
-                                                    borderRadius: '6px', cursor: 'pointer',
-                                                    transition: 'all 0.2s', width: 'fit-content'
-                                                }}
-                                                onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.backgroundColor = '#e5e7eb'; }}
-                                                onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.backgroundColor = '#f3f4f6'; }}
+                                                className={`metric-trend-btn ${isActive ? '' : 'inactive'}`}
+                                                style={isActive ? {
+                                                    color: cfg.color,
+                                                    backgroundColor: cfg.bg,
+                                                    border: `1px solid ${cfg.color}`
+                                                } : {}}
                                             >
                                                 <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
                                                     {isLoading ? 'hourglass_empty' : isActive ? 'expand_less' : 'show_chart'}
