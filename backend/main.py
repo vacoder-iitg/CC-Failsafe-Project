@@ -11,10 +11,44 @@ import numpy as np
 import joblib
 import io
 import shap
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+import base64
+
+FEATURE_LABELS = {
+    'age': 'Age', 'traveltime': 'Commute Time', 'studytime': 'Study Time', 'failures': 'Past Class Failures',
+    'famrel': 'Family Relationship', 'health': 'Health Status', 'absences': 'Total Absences',
+    'G1': 'Period 1 Grade', 'G2': 'Period 2 Grade', 'Total_Alcohol': 'Total Alcohol Intake',
+    'Parent_Edu_Sum': "Parents' Education", 'Social_Life': 'Social Life & Free Time',
+    'Study_Support': 'Total Academic Support', 'Study_vs_Social': 'Study Time vs Social Life',
+    'Study_per_Absent': 'Study Time per Absence', 'Support_per_Fail': 'Support vs Past Failures',
+    'Fail_Burden': 'Failure History x Alcohol Use', 'Health_Absence': 'Health Issues x Absences',
+    'Risk_Index': 'Composite Risk Index', 'G1_norm': 'Period 1 Grade (Normalized)',
+    'G2_norm': 'Period 2 Grade (Normalized)', 'G2_G1_delta': 'Grade Trend (G2 - G1)',
+    'G_avg_P1P2': 'Average Grade (P1 & P2)', 'G1_below_pass': 'Failed Period 1',
+    'G2_below_pass': 'Failed Period 2', 'Both_failing': 'Failing Both Periods',
+    'studytime_sq': 'Consistent Study Habit', 'absences_log': 'Frequent Absences',
+    'age_failures': 'Age x Past Failures', 'parent_support': 'Parental Education & Support',
+    'school_MS': 'School: Mousinho da Silveira', 'sex_M': 'Gender: Male',
+    'address_U': 'Urban Resident', 'famsize_LE3': 'Small Family Size',
+    'Pstatus_T': 'Parents Living Together', 'Mjob_health': "Mother's Job: Health",
+    'Mjob_other': "Mother's Job: Other", 'Mjob_services': "Mother's Job: Services",
+    'Mjob_teacher': "Mother's Job: Teacher", 'Fjob_health': "Father's Job: Health",
+    'Fjob_other': "Father's Job: Other", 'Fjob_services': "Father's Job: Services",
+    'Fjob_teacher': "Father's Job: Teacher", 'reason_home': 'Reason for School: Close to Home',
+    'reason_other': 'Reason for School: Other', 'reason_reputation': 'Reason for School: Reputation',
+    'guardian_mother': 'Guardian: Mother', 'guardian_other': 'Guardian: Other',
+    'schoolsup_yes': 'Receives School Support', 'famsup_yes': 'Receives Family Support',
+    'paid_yes': 'Attends Paid Classes', 'activities_yes': 'Extracurricular Activities',
+    'nursery_yes': 'Attended Nursery School', 'higher_yes': 'Wants Higher Education',
+    'internet_yes': 'Has Internet Access', 'romantic_yes': 'In a Romantic Relationship',
+    'subject_por': 'Subject: Portuguese'
+}
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    print("\n🚀 FAIL SAFE MULTI-TENANT ENGINE STARTING...")
+    print("\n[STARTING] FAIL SAFE MULTI-TENANT ENGINE STARTING...")
     yield
 
 app = FastAPI(lifespan=lifespan)
@@ -72,10 +106,10 @@ try:
         best_threshold = 0.5 
         
     explainer = shap.TreeExplainer(model_clf)
-    print(f"✅ ML Models Loaded. Features: {len(model_features)} | F1 Threshold: {best_threshold}")
+    print(f"[SUCCESS] ML Models Loaded. Features: {len(model_features)} | F1 Threshold: {best_threshold}")
 except Exception as e:
     model_clf, model_reg, model_features, explainer, best_threshold = None, None, None, None, 0.5
-    print(f"⚠️ ML Models failed to load: {e}")
+    print(f"[ERROR] ML Models failed to load: {e}")
 
 def get_risk_tier(prob, threshold=None):
     th = threshold if threshold else best_threshold
@@ -173,6 +207,7 @@ def get_insights(student_id: int, db: Session = Depends(get_db), teacher_id: str
     pred_g3 = "-"
     risk_prob = student.risk_score or 0.0
     top_10_insights = []
+    shap_graph_base64 = None
     
     if model_reg and model_clf and model_features is not None and explainer is not None:
         try:
@@ -186,13 +221,63 @@ def get_insights(student_id: int, db: Session = Depends(get_db), teacher_id: str
             shap_results = explainer.shap_values(df_final)
             shap_vals = shap_results[1][0] if isinstance(shap_results, list) and len(shap_results) > 1 else (shap_results[0][0] if isinstance(shap_results, list) else shap_results[0])
             
+            try:
+                feature_names_friendly = [FEATURE_LABELS.get(f, f) for f in model_features]
+                shap_pairs = list(zip(feature_names_friendly, shap_vals))
+                shap_pairs.sort(key=lambda x: abs(x[1]), reverse=True)
+                top_shap_pairs = shap_pairs[:10]
+                top_shap_pairs.reverse()
+                
+                labels = []
+                values = []
+                colors = []
+                for feature, val in top_shap_pairs:
+                    if val > 0:
+                        cat = "High Risk Factor" if val > 0.08 else "Moderate Risk Factor"
+                        color = "#e74c3c" if val > 0.08 else "#f39c12"
+                    else:
+                        cat = "High Protective Factor" if val < -0.08 else "Moderate Protective Factor"
+                        color = "#27ae60" if val < -0.08 else "#2ecc71"
+                            
+                    labels.append(f"{feature}\n({cat})")
+                    values.append(val)
+                    colors.append(color)
+
+                plt.figure(figsize=(10, 7))
+                bars = plt.barh(labels, values, color=colors, edgecolor='none')
+                plt.axvline(0, color='gray', linewidth=1, linestyle='--')
+                plt.title("Student Risk Drivers (Protective vs. Risk Factors)", fontsize=14, pad=20)
+                plt.xlabel("Impact on Risk Probability", fontsize=12)
+                for spine in plt.gca().spines.values():
+                    spine.set_visible(False)
+                plt.grid(axis='x', linestyle='--', alpha=0.5)
+                for bar, val in zip(bars, values):
+                    x_offset = 0.005 if val > 0 else -0.005
+                    ha = 'left' if val > 0 else 'right'
+                    plt.text(val + x_offset, bar.get_y() + bar.get_height()/2, f"{val:+.3f}", va='center', ha=ha, fontsize=10, fontweight='bold', color='#333333')
+
+                plt.tight_layout()
+                buf = io.BytesIO()
+                plt.savefig(buf, format='png', bbox_inches='tight', transparent=True)
+                buf.seek(0)
+                shap_graph_base64 = base64.b64encode(buf.read()).decode('utf-8')
+                plt.close()
+            except Exception as e:
+                print(f"Failed to generate custom SHAP plot: {e}")
+                
             student_record = df_final.iloc[0].to_dict()
             for feature_name, val in zip(model_features, shap_vals):
                 if abs(val) >= 0.02: 
+                    friendly_name = FEATURE_LABELS.get(feature_name, feature_name)
+                    if val > 0:
+                        type_str = "High Risk Factor" if val > 0.08 else "Moderate Risk Factor"
+                    else:
+                        type_str = "High Protective Factor" if val < -0.08 else "Moderate Protective Factor"
+                    
                     top_10_insights.append({
-                        "feature": feature_name,
+                        "feature": friendly_name,
                         "impact_score": round(float(val), 3),
-                        "type": "Risk Driver" if val > 0 else "Protective Factor",
+                        "type": type_str,
                         "raw_student_value": round(float(student_record.get(feature_name, 0)), 2)
                     })
             
@@ -217,7 +302,8 @@ def get_insights(student_id: int, db: Session = Depends(get_db), teacher_id: str
             "social_outings_level": student.goout
         },
         "top_10_shap_drivers": top_10_insights, 
-        "recommended_actions": actions
+        "recommended_actions": actions,
+        "shap_graph_base64": shap_graph_base64
     }
 
 @app.post("/upload-csv/")

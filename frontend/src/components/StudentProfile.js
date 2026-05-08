@@ -108,14 +108,28 @@ const StudentProfile = () => {
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
                         {top_10_shap_drivers.map((driver, idx) => {
-                            const isRisk = driver?.type === "Risk Driver";
-                            const impactColor = isRisk ? '#ef4444' : '#0284c7'; 
-                            const bgColor = isRisk ? '#fef2f2' : '#f0f9ff';
+                            const isRisk = driver?.type?.includes("Risk");
+                            const isHigh = driver?.type?.includes("High");
+                            
+                            const impactColor = isRisk 
+                                ? (isHigh ? '#b91c1c' : '#ef4444') 
+                                : (isHigh ? '#0369a1' : '#38bdf8'); 
+                            const bgColor = isRisk 
+                                ? (isHigh ? '#fef2f2' : '#fff1f2') 
+                                : (isHigh ? '#f0f9ff' : '#e0f2fe');
                             
                             const score = driver?.impact_score || 0;
                             const impactText = score > 0 
-                                ? `+${score.toFixed(1)} pts Risk` 
-                                : `${score.toFixed(1)} pts Protective`;
+                                ? `+${(score * 100).toFixed(1)}% Risk` 
+                                : `${(score * 100).toFixed(1)}% Protective`;
+
+                            // Dynamic Gauge Calculations
+                            const scoreAbs = Math.abs(score);
+                            const maxExpectedScore = 0.15; // Typical max SHAP impact
+                            const percentage = Math.min(1, Math.max(0.1, scoreAbs / maxExpectedScore));
+                            const angle = percentage * 90;
+                            const arcLength = 31.416;
+                            const dashOffset = arcLength - (percentage * arcLength);
 
                             // BULLETPROOF STRING PARSING
                             const rawString = driver?.raw_feature || driver?.feature || "";
@@ -140,9 +154,13 @@ const StudentProfile = () => {
                                         <div style={{ marginLeft: '10px' }}>
                                             <svg width="48" height="24" viewBox="0 0 48 24" style={{ overflow: 'visible' }}>
                                                 <path d="M 4 24 A 20 20 0 0 1 44 24" fill="none" stroke="#e5e7eb" strokeWidth="8" strokeLinecap="round" />
-                                                <path d={isRisk ? "M 24 4 A 20 20 0 0 1 44 24" : "M 4 24 A 20 20 0 0 1 24 4"} fill="none" stroke={impactColor} strokeWidth="8" strokeLinecap="round" />
+                                                {isRisk ? (
+                                                    <path d="M 24 4 A 20 20 0 0 1 44 24" fill="none" stroke={impactColor} strokeWidth="8" strokeLinecap="round" strokeDasharray={arcLength} strokeDashoffset={dashOffset} />
+                                                ) : (
+                                                    <path d="M 24 4 A 20 20 0 0 0 4 24" fill="none" stroke={impactColor} strokeWidth="8" strokeLinecap="round" strokeDasharray={arcLength} strokeDashoffset={dashOffset} />
+                                                )}
                                                 <line x1="24" y1="24" x2="24" y2="4" stroke="#374151" strokeWidth="3" strokeLinecap="round" 
-                                                      style={{ transform: `rotate(${isRisk ? '45deg' : '-45deg'})`, transformOrigin: '24px 24px' }} />
+                                                      style={{ transform: `rotate(${isRisk ? angle : -angle}deg)`, transformOrigin: '24px 24px', transition: 'transform 0.5s ease' }} />
                                                 <circle cx="24" cy="24" r="4" fill="#374151" />
                                             </svg>
                                         </div>
@@ -180,6 +198,23 @@ const StudentProfile = () => {
                             );
                         })}
                     </div>
+                </div>
+            )}
+
+            {/* Visual SHAP Graph Section */}
+            {profileData?.shap_graph_base64 && (
+                <div style={{ backgroundColor: 'white', padding: '24px', borderRadius: '8px', border: '1px solid #e5e7eb', marginTop: '30px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', textAlign: 'center' }}>
+                    <h3 style={{ marginTop: 0, paddingBottom: '10px', color: '#1f2937', borderBottom: '2px solid #f3f4f6' }}>
+                        Visual SHAP Explanation
+                    </h3>
+                    <p style={{ color: '#6b7280', fontSize: '14px', marginBottom: '20px' }}>
+                        This waterfall plot visualizes how different features push the model's prediction higher or lower from the base value.
+                    </p>
+                    <img 
+                        src={`data:image/png;base64,${profileData.shap_graph_base64}`} 
+                        alt="SHAP Waterfall Graph" 
+                        style={{ maxWidth: '100%', height: 'auto', borderRadius: '4px' }}
+                    />
                 </div>
             )}
         </div>

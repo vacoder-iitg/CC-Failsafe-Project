@@ -9,8 +9,7 @@ const Dashboard = () => {
     const [students, setStudents] = useState([]);
     const [loading, setLoading] = useState(true);
     
-    // --- NEW: Sorting State ---
-    // Tracks current sort direction: 'highest' means highest risk first (descending)
+    // UI States
     const [sortOrder, setSortOrder] = useState('highest'); 
 
     const fetchStudents = () => {
@@ -39,13 +38,11 @@ const Dashboard = () => {
         if (user) fetchStudents(); 
     }, [user]);
 
-    // --- NEW: Sorting Logic ---
-    // We create a copy of the array and sort it based on the raw float `risk_score`
     const sortedStudents = [...students].sort((a, b) => {
         if (sortOrder === 'highest') {
-            return b.risk_score - a.risk_score; // Descending (High to Low)
+            return b.risk_score - a.risk_score; 
         } else {
-            return a.risk_score - b.risk_score; // Ascending (Low to High)
+            return a.risk_score - b.risk_score; 
         }
     });
 
@@ -71,27 +68,22 @@ const Dashboard = () => {
                 <div style={{ textAlign: 'center', padding: '40px' }}>Loading students...</div>
             ) : (
                 <div style={{ marginTop: '30px' }}>
-                    {/* --- NEW: Header Controls with Sort Button --- */}
+                    {/* Header Controls with Sort Button */}
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                         <h3 style={{ margin: 0 }}>Student Vault ({students.length})</h3>
+                        
                         {students.length > 0 && (
-                            <button 
-                                onClick={toggleSort}
-                                style={{
-                                    padding: '8px 16px',
-                                    backgroundColor: '#4b5563',
-                                    color: 'white',
-                                    border: 'none',
-                                    borderRadius: '6px',
-                                    cursor: 'pointer',
-                                    fontWeight: 'bold',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '8px'
-                                }}
-                            >
-                                ↕️ Sort: {sortOrder === 'highest' ? 'Highest Risk First' : 'Lowest Risk First'}
-                            </button>
+                            <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                                <button 
+                                    onClick={toggleSort}
+                                    style={{
+                                        padding: '8px 16px', backgroundColor: '#4b5563', color: 'white', border: 'none',
+                                        borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px'
+                                    }}
+                                >
+                                    ↕️ Sort: {sortOrder === 'highest' ? 'Highest Risk First' : 'Lowest Risk First'}
+                                </button>
+                            </div>
                         )}
                     </div>
 
@@ -102,13 +94,13 @@ const Dashboard = () => {
                                     <th style={thStyle}>Name</th>
                                     <th style={thStyle}>Risk Tier</th>
                                     <th style={{...thStyle, textAlign: 'center'}}>Current G1</th>
-                                    <th style={{...thStyle, textAlign: 'center'}}>Predicted G3</th>
+                                    <th style={{...thStyle, textAlign: 'center'}}>Current G2</th>
+                                    <th style={{...thStyle, textAlign: 'center', backgroundColor: '#e0f2fe', color: '#0369a1'}}>Predicted G3</th>
                                     <th style={{...thStyle, textAlign: 'center'}}>Total Absences</th>
                                     <th style={{...thStyle, textAlign: 'center'}}>Action</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {/* --- NEW: Mapping over sortedStudents instead of raw students --- */}
                                 {sortedStudents.map(s => {
                                     const isHighRisk = s.risk_category && s.risk_category.includes('HIGH');
                                     const isModerate = s.risk_category && s.risk_category.includes('MODERATE');
@@ -132,7 +124,6 @@ const Dashboard = () => {
                                             <td style={tdStyle}>
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                                     <span style={badgeStyle}>{s.risk_category || "UNSCORED"}</span>
-                                                    {/* Optional: Show exact percentage next to the badge */}
                                                     {s.risk_score !== undefined && (
                                                         <span style={{ fontSize: '11px', color: '#6b7280' }}>
                                                             ({(s.risk_score * 100).toFixed(1)}%)
@@ -141,7 +132,10 @@ const Dashboard = () => {
                                                 </div>
                                             </td>
                                             <td style={{...tdStyle, textAlign: 'center'}}>{s.G1}</td>
-                                            <td style={{...tdStyle, textAlign: 'center', color: '#2563eb', fontWeight: 'bold'}}>{s.predicted_g3 || '-'}</td>
+                                            <td style={{...tdStyle, textAlign: 'center'}}>{s.G2}</td>
+                                            <td style={{...tdStyle, textAlign: 'center', color: '#2563eb', fontWeight: 'bold', backgroundColor: '#f0f9ff'}}>
+                                                {s.predicted_g3 || '-'}
+                                            </td>
                                             <td style={{...tdStyle, textAlign: 'center'}}>{s.absences}</td>
                                             <td style={{...tdStyle, textAlign: 'center'}}>
                                                 <button onClick={() => navigate(`/student/${s.id}`)} style={{ padding: '6px 12px', backgroundColor: '#3b82f6', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', fontSize: '12px' }}>
