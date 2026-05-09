@@ -215,6 +215,16 @@ def get_insights(student_id: int, db: Session = Depends(get_db), teacher_id: str
             
             df_final = preprocess_features(pd.DataFrame([student_dict]), model_features)
             
+            # Compute class-wide statistics for the UI scale
+            all_students = db.query(models.Student).filter(models.Student.teacher_id == teacher_id).all()
+            all_students_dict = [{c.name: getattr(s, c.name) for c in s.__table__.columns} for s in all_students]
+            df_all = pd.DataFrame(all_students_dict)
+            df_all_final = preprocess_features(df_all, model_features)
+            
+            feature_means = df_all_final.mean().to_dict()
+            feature_mins = df_all_final.min().to_dict()
+            feature_maxs = df_all_final.max().to_dict()
+            
             pred_g3 = round(float(np.clip(model_reg.predict(df_final)[0], 0, 20)), 1)
             risk_prob = float(model_clf.predict_proba(df_final)[:, 1][0])
 
@@ -278,7 +288,10 @@ def get_insights(student_id: int, db: Session = Depends(get_db), teacher_id: str
                         "feature": friendly_name,
                         "impact_score": round(float(val), 3),
                         "type": type_str,
-                        "raw_student_value": round(float(student_record.get(feature_name, 0)), 2)
+                        "raw_student_value": round(float(student_record.get(feature_name, 0)), 2),
+                        "avg_value": round(float(feature_means.get(feature_name, 0)), 2),
+                        "min_value": round(float(feature_mins.get(feature_name, 0)), 2),
+                        "max_value": round(float(feature_maxs.get(feature_name, 0)), 2)
                     })
             
             top_10_insights.sort(key=lambda x: abs(x["impact_score"]), reverse=True)
@@ -304,6 +317,146 @@ def get_insights(student_id: int, db: Session = Depends(get_db), teacher_id: str
         "top_10_shap_drivers": top_10_insights, 
         "recommended_actions": actions,
         "shap_graph_base64": shap_graph_base64
+    }
+
+@app.get("/class/insights")
+def get_class_insights(db: Session = Depends(get_db), teacher_id: str = Depends(get_current_user_id)):
+    students = db.query(models.Student).filter(models.Student.teacher_id == teacher_id).all()
+    if not students:
+        return {"avg_g1": 0, "avg_g2": 0, "avg_pred_g3": 0, "avg_absences": 0, "shap_graph_base64": None}
+    
+    avg_g1 = round(sum(s.G1 for s in students) / len(students), 1)
+    avg_g2 = round(sum(s.G2 for s in students) / len(students), 1)
+    avg_absences = round(sum(s.absences for s in students) / len(students), 1)
+    
+    avg_pred_g3 = 0
+    shap_graph_base64 = None
+    trend_commute_base64 = None
+    trend_grades_base64 = None
+    engineered_metrics = {}
+    
+    if model_reg and model_clf and model_features is not None and explainer is not None:
+        try:
+            student_list = []
+            for s in students:
+                student_list.append({c.name: getattr(s, c.name) for c in s.__table__.columns})
+                
+            df = pd.DataFrame(student_list)
+            df_final = preprocess_features(df, model_features)
+            
+            features_to_extract = ['Risk_Index', 'Fail_Burden', 'Total_Alcohol', 'Social_Life', 'Study_Support', 'Parent_Edu_Sum', 'G2_G1_delta']
+            for f in features_to_extract:
+                if f in df_final.columns:
+                    engineered_metrics[f] = round(float(df_final[f].mean()), 2)
+            
+            preds = np.clip(model_reg.predict(df_final), 0, 20)
+            avg_pred_g3 = round(float(np.mean(preds)), 1)
+            
+            shap_results = explainer.shap_values(df_final)
+            if isinstance(shap_results, list) and len(shap_results) > 1:
+                shap_vals_matrix = shap_results[1]
+            elif isinstance(shap_results, list):
+                shap_vals_matrix = shap_results[0]
+            else:
+                shap_vals_matrix = shap_results
+                
+            avg_shap_vals = np.mean(shap_vals_matrix, axis=0)
+            
+            feature_names_friendly = [FEATURE_LABELS.get(f, f) for f in model_features]
+            shap_pairs = list(zip(feature_names_friendly, avg_shap_vals))
+            shap_pairs.sort(key=lambda x: abs(x[1]), reverse=True)
+            top_shap_pairs = shap_pairs[:10]
+            top_shap_pairs.reverse()
+            
+            labels = []
+            values = []
+            colors = []
+            for feature, val in top_shap_pairs:
+                if val > 0:
+                    cat = "Avg High Risk Factor" if val > 0.05 else "Avg Moderate Risk Factor"
+                    color = "#e74c3c" if val > 0.05 else "#f39c12"
+                else:
+                    cat = "Avg High Protective Factor" if val < -0.05 else "Avg Moderate Protective Factor"
+                    color = "#27ae60" if val < -0.05 else "#2ecc71"
+                        
+                labels.append(f"{feature}\n({cat})")
+                values.append(val)
+                colors.append(color)
+
+            plt.figure(figsize=(10, 7))
+            bars = plt.barh(labels, values, color=colors, edgecolor='none')
+            plt.axvline(0, color='gray', linewidth=1, linestyle='--')
+            plt.title("Class-Wide Average Risk Drivers", fontsize=14, pad=20)
+            plt.xlabel("Average Impact on Risk Probability", fontsize=12)
+            for spine in plt.gca().spines.values():
+                spine.set_visible(False)
+            plt.grid(axis='x', linestyle='--', alpha=0.5)
+            for bar, val in zip(bars, values):
+                x_offset = 0.005 if val > 0 else -0.005
+                ha = 'left' if val > 0 else 'right'
+                plt.text(val + x_offset, bar.get_y() + bar.get_height()/2, f"{val:+.3f}", va='center', ha=ha, fontsize=10, fontweight='bold', color='#333333')
+
+            plt.tight_layout()
+            buf = io.BytesIO()
+            plt.savefig(buf, format='png', bbox_inches='tight', transparent=True)
+            buf.seek(0)
+            shap_graph_base64 = base64.b64encode(buf.read()).decode('utf-8')
+            plt.close()
+            
+            try:
+                # Plot 2: Commute Time vs Predicted G3
+                travel_vals = [s.traveltime for s in students]
+                plt.figure(figsize=(6, 4))
+                data = [preds[np.array(travel_vals) == 1], preds[np.array(travel_vals) == 2], preds[np.array(travel_vals) == 3], preds[np.array(travel_vals) == 4]]
+                data = [d if len(d) > 0 else [0] for d in data] 
+                plt.boxplot(data, labels=["<15 min", "15-30 min", "30-60 min", ">60 min"], patch_artist=True, boxprops=dict(facecolor='#1abc9c', color='#16a085'))
+                plt.title("Commute Time vs Predicted Final Grade", fontsize=12)
+                plt.xlabel("Commute Time")
+                plt.ylabel("Predicted G3 Score")
+                plt.grid(True, axis='y', linestyle='--', alpha=0.5)
+                for spine in plt.gca().spines.values(): spine.set_color('#e5e7eb')
+                plt.tight_layout()
+                buf = io.BytesIO()
+                plt.savefig(buf, format='png', bbox_inches='tight', transparent=True, dpi=100)
+                buf.seek(0)
+                trend_commute_base64 = base64.b64encode(buf.read()).decode('utf-8')
+                plt.close()
+                
+                # Plot 3: Average G1 & G2 vs Predicted G3
+                avg_past_grades = [(s.G1 + s.G2) / 2 for s in students]
+                plt.figure(figsize=(6, 4))
+                plt.scatter(avg_past_grades, preds, alpha=0.6, color="#9b59b6")
+                if len(avg_past_grades) > 1:
+                    z = np.polyfit(avg_past_grades, preds, 1)
+                    p = np.poly1d(z)
+                    plt.plot(sorted(avg_past_grades), p(sorted(avg_past_grades)), "r--", linewidth=2)
+                plt.title("Avg Past Grades (G1, G2) vs Predicted G3", fontsize=12)
+                plt.xlabel("Average Past Grade (G1 & G2)")
+                plt.ylabel("Predicted G3 Score")
+                plt.grid(True, linestyle='--', alpha=0.5)
+                for spine in plt.gca().spines.values(): spine.set_color('#e5e7eb')
+                plt.tight_layout()
+                buf = io.BytesIO()
+                plt.savefig(buf, format='png', bbox_inches='tight', transparent=True, dpi=100)
+                buf.seek(0)
+                trend_grades_base64 = base64.b64encode(buf.read()).decode('utf-8')
+                plt.close()
+                
+            except Exception as e:
+                print(f"Failed to generate trend plots: {e}")
+            
+        except Exception as e:
+            print(f"Prediction/SHAP Error in class insights: {e}")
+            
+    return {
+        "avg_g1": avg_g1,
+        "avg_g2": avg_g2,
+        "avg_pred_g3": avg_pred_g3,
+        "avg_absences": avg_absences,
+        "engineered_metrics": engineered_metrics,
+        "shap_graph_base64": shap_graph_base64,
+        "trend_commute_base64": trend_commute_base64,
+        "trend_grades_base64": trend_grades_base64
     }
 
 @app.post("/upload-csv/")
