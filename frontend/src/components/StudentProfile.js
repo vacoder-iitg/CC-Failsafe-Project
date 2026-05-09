@@ -41,6 +41,7 @@ const StudentProfile = () => {
     const isHighRisk = riskTier.includes('HIGH');
     const isModRisk = riskTier.includes('MODERATE');
     const riskColor = isHighRisk ? '#b91c1c' : isModRisk ? '#b45309' : '#047857';
+    const riskTierText = riskTier.replace(/🔴 |🟡 |🟢 /g, '');
 
     return (
         <div style={{ padding: '30px', fontFamily: 'sans-serif', backgroundColor: '#f9fafb', minHeight: '100vh' }}>
@@ -56,7 +57,10 @@ const StudentProfile = () => {
                     <h2 style={{ margin: 0, fontSize: '32px', color: riskColor }}>
                         {student_info?.at_risk_probability || "0%"}
                     </h2>
-                    <p style={{ margin: 0, color: '#6b7280', fontWeight: 'bold' }}>{riskTier}</p>
+                    <p style={{ margin: 0, color: '#6b7280', fontWeight: 'bold' }}>
+                        <span className="material-symbols-outlined" style={{ fontSize: '18px', verticalAlign: 'bottom', marginRight: '4px', color: riskColor }}>threat_intelligence</span>
+                        {riskTierText}
+                    </p>
                 </div>
             </div>
 
@@ -108,14 +112,28 @@ const StudentProfile = () => {
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
                         {top_10_shap_drivers.map((driver, idx) => {
-                            const isRisk = driver?.type === "Risk Driver";
-                            const impactColor = isRisk ? '#ef4444' : '#0284c7'; 
-                            const bgColor = isRisk ? '#fef2f2' : '#f0f9ff';
+                            const isRisk = driver?.type?.includes("Risk");
+                            const isHigh = driver?.type?.includes("High");
+                            
+                            const impactColor = isRisk 
+                                ? (isHigh ? '#b91c1c' : '#ef4444') 
+                                : (isHigh ? '#15803d' : '#22c55e'); 
+                            const bgColor = isRisk 
+                                ? (isHigh ? '#fef2f2' : '#fff1f2') 
+                                : (isHigh ? '#f0fdf4' : '#dcfce7');
                             
                             const score = driver?.impact_score || 0;
                             const impactText = score > 0 
-                                ? `+${score.toFixed(1)} pts Risk` 
-                                : `${score.toFixed(1)} pts Protective`;
+                                ? `+${(score * 100).toFixed(1)}% Risk` 
+                                : `${(score * 100).toFixed(1)}% Protective`;
+
+                            // Dynamic Gauge Calculations
+                            const scoreAbs = Math.abs(score);
+                            const maxExpectedScore = 0.15; // Typical max SHAP impact
+                            const percentage = Math.min(1, Math.max(0.1, scoreAbs / maxExpectedScore));
+                            const angle = percentage * 90;
+                            const arcLength = 31.416;
+                            const dashOffset = arcLength - (percentage * arcLength);
 
                             // BULLETPROOF STRING PARSING
                             const rawString = driver?.raw_feature || driver?.feature || "";
@@ -140,9 +158,13 @@ const StudentProfile = () => {
                                         <div style={{ marginLeft: '10px' }}>
                                             <svg width="48" height="24" viewBox="0 0 48 24" style={{ overflow: 'visible' }}>
                                                 <path d="M 4 24 A 20 20 0 0 1 44 24" fill="none" stroke="#e5e7eb" strokeWidth="8" strokeLinecap="round" />
-                                                <path d={isRisk ? "M 24 4 A 20 20 0 0 1 44 24" : "M 4 24 A 20 20 0 0 1 24 4"} fill="none" stroke={impactColor} strokeWidth="8" strokeLinecap="round" />
+                                                {isRisk ? (
+                                                    <path d="M 24 4 A 20 20 0 0 1 44 24" fill="none" stroke={impactColor} strokeWidth="8" strokeLinecap="round" strokeDasharray={arcLength} strokeDashoffset={dashOffset} />
+                                                ) : (
+                                                    <path d="M 24 4 A 20 20 0 0 0 4 24" fill="none" stroke={impactColor} strokeWidth="8" strokeLinecap="round" strokeDasharray={arcLength} strokeDashoffset={dashOffset} />
+                                                )}
                                                 <line x1="24" y1="24" x2="24" y2="4" stroke="#374151" strokeWidth="3" strokeLinecap="round" 
-                                                      style={{ transform: `rotate(${isRisk ? '45deg' : '-45deg'})`, transformOrigin: '24px 24px' }} />
+                                                      style={{ transform: `rotate(${isRisk ? angle : -angle}deg)`, transformOrigin: '24px 24px', transition: 'transform 0.5s ease' }} />
                                                 <circle cx="24" cy="24" r="4" fill="#374151" />
                                             </svg>
                                         </div>
@@ -152,8 +174,10 @@ const StudentProfile = () => {
                                     <div style={{ flex: 1 }}>
                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                                             <div style={{ fontWeight: 'bold', fontSize: '16px', color: '#111827' }}>
-                                                <span style={{ color: impactColor, marginRight: '8px', fontSize: '18px' }}>
-                                                    {isRisk ? '↑!' : '↓'}
+                                                <span style={{ color: impactColor, marginRight: '8px', verticalAlign: 'middle', display: 'inline-flex', alignItems: 'center' }}>
+                                                    <span className="material-symbols-outlined" style={{ fontSize: '24px' }}>
+                                                        {isRisk ? 'trending_up' : 'trending_down'}
+                                                    </span>
                                                 </span>
                                                 [{driver?.feature || "Unknown Feature"}]
                                             </div>
@@ -163,11 +187,85 @@ const StudentProfile = () => {
                                         </div>
                                         
                                         <div style={{ fontSize: '14px', color: '#4b5563', lineHeight: '1.6', marginLeft: '24px' }}>
-                                            <div style={{ display: 'flex', marginBottom: '4px' }}>
-                                                <strong style={{ width: '120px', color: '#374151' }}>Data Context:</strong> 
-                                                <span>{rawString.replace(/_/g, ' ')}: {driver?.raw_student_value ?? 'N/A'}</span>
+                                            
+                                            {/* Visual Scale UI */}
+                                            <div style={{ marginBottom: '16px', marginTop: '16px' }}>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '14px', fontSize: '13px' }}>
+                                                    <strong style={{ color: '#374151', display: 'flex', alignItems: 'center' }}>
+                                                        <span className="material-symbols-outlined" style={{ fontSize: '16px', marginRight: '4px' }}>person</span>
+                                                        Student Value: {driver?.raw_student_value ?? 'N/A'}
+                                                    </strong>
+                                                    <span style={{ color: '#6b7280', display: 'flex', alignItems: 'center' }}>
+                                                        Class Average: {driver?.avg_value ?? 'N/A'}
+                                                        <span className="material-symbols-outlined" style={{ fontSize: '16px', marginLeft: '4px' }}>group</span>
+                                                    </span>
+                                                </div>
+                                                
+                                                {driver?.min_value !== undefined && driver?.max_value !== undefined && (
+                                                    <div style={{ position: 'relative', height: '12px', backgroundColor: '#f3f4f6', borderRadius: '6px' }}>
+                                                        {(() => {
+                                                            const min = driver.min_value;
+                                                            const max = driver.max_value;
+                                                            const avg = driver.avg_value;
+                                                            const val = driver.raw_student_value;
+                                                            
+                                                            const range = max - min;
+                                                            const safeRange = range === 0 ? 1 : range;
+                                                            
+                                                            const avgPos = Math.max(0, Math.min(100, ((avg - min) / safeRange) * 100));
+                                                            const valPos = Math.max(0, Math.min(100, ((val - min) / safeRange) * 100));
+                                                            
+                                                            const fillStart = Math.min(avgPos, valPos);
+                                                            const fillWidth = Math.abs(avgPos - valPos);
+                                                            
+                                                            return (
+                                                                <>
+                                                                    {/* The Impact Fill (Color between Avg and Student) */}
+                                                                    <div style={{
+                                                                        position: 'absolute',
+                                                                        left: `${fillStart}%`,
+                                                                        width: `${fillWidth}%`,
+                                                                        height: '100%',
+                                                                        backgroundColor: impactColor,
+                                                                        opacity: 0.3,
+                                                                        borderRadius: fillStart === 0 && fillWidth === 100 ? '6px' : 
+                                                                                      fillStart === 0 ? '6px 0 0 6px' : 
+                                                                                      fillStart + fillWidth >= 100 ? '0 6px 6px 0' : '0'
+                                                                    }} />
+                                                                    
+                                                                    {/* Average Marker */}
+                                                                    <div style={{
+                                                                        position: 'absolute',
+                                                                        left: `${avgPos}%`,
+                                                                        top: '-6px',
+                                                                        bottom: '-6px',
+                                                                        width: '2px',
+                                                                        backgroundColor: '#9ca3af',
+                                                                        zIndex: 1
+                                                                    }} />
+                                                                    
+                                                                    {/* Student Value Marker */}
+                                                                    <div style={{
+                                                                        position: 'absolute',
+                                                                        left: `${valPos}%`,
+                                                                        top: '50%',
+                                                                        transform: 'translate(-50%, -50%)',
+                                                                        width: '14px',
+                                                                        height: '14px',
+                                                                        borderRadius: '50%',
+                                                                        backgroundColor: impactColor,
+                                                                        border: '2px solid white',
+                                                                        boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
+                                                                        zIndex: 2
+                                                                    }} />
+                                                                </>
+                                                            );
+                                                        })()}
+                                                    </div>
+                                                )}
                                             </div>
-                                            <div style={{ display: 'flex', alignItems: 'flex-start' }}>
+
+                                            <div style={{ display: 'flex', alignItems: 'center' }}>
                                                 <strong style={{ width: '120px', color: '#374151' }}>Linked Action:</strong> 
                                                 <span style={{ backgroundColor: '#f3f4f6', padding: '2px 8px', borderRadius: '4px', fontSize: '13px' }}>
                                                     {linkedAction}
@@ -180,6 +278,23 @@ const StudentProfile = () => {
                             );
                         })}
                     </div>
+                </div>
+            )}
+
+            {/* Visual SHAP Graph Section */}
+            {profileData?.shap_graph_base64 && (
+                <div style={{ backgroundColor: 'white', padding: '24px', borderRadius: '8px', border: '1px solid #e5e7eb', marginTop: '30px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', textAlign: 'center' }}>
+                    <h3 style={{ marginTop: 0, paddingBottom: '10px', color: '#1f2937', borderBottom: '2px solid #f3f4f6' }}>
+                        Visual SHAP Explanation
+                    </h3>
+                    <p style={{ color: '#6b7280', fontSize: '14px', marginBottom: '20px' }}>
+                        This waterfall plot visualizes how different features push the model's prediction higher or lower from the base value.
+                    </p>
+                    <img 
+                        src={`data:image/png;base64,${profileData.shap_graph_base64}`} 
+                        alt="SHAP Waterfall Graph" 
+                        style={{ maxWidth: '100%', height: 'auto', borderRadius: '4px' }}
+                    />
                 </div>
             )}
         </div>
