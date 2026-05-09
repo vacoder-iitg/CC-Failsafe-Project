@@ -75,13 +75,16 @@ def get_current_user_id(authorization: str = Header(None)):
 class UserAuth(BaseModel):
     username: str
     password: str
+    role: str = "Faculty"  # 'Faculty' or 'HoD'
+
 
 @app.post("/signup")
 def create_user(user: UserAuth, db: Session = Depends(get_db)):
     existing_user = db.query(models.User).filter(models.User.username == user.username).first()
     if existing_user:
-        raise HTTPException(status_code=400, detail="⚠️ Username already exists. Please log in.")
-    new_user = models.User(username=user.username, password=user.password)
+        raise HTTPException(status_code=400, detail="Username already exists. Please log in.")
+    role = user.role if user.role in ('Faculty', 'HoD') else 'Faculty'
+    new_user = models.User(username=user.username, password=user.password, role=role)
     db.add(new_user)
     db.commit()
     return {"message": "Account created successfully!"}
@@ -90,10 +93,10 @@ def create_user(user: UserAuth, db: Session = Depends(get_db)):
 def login_user(user: UserAuth, db: Session = Depends(get_db)):
     db_user = db.query(models.User).filter(models.User.username == user.username).first()
     if not db_user:
-        raise HTTPException(status_code=404, detail="❌ User not found. Please create an account.")
+        raise HTTPException(status_code=404, detail="User not found. Please create an account.")
     if db_user.password != user.password:
-        raise HTTPException(status_code=401, detail="❌ Incorrect password.")
-    return {"token": db_user.username, "role": "Faculty"}
+        raise HTTPException(status_code=401, detail="Incorrect password.")
+    return {"token": db_user.username, "role": db_user.role or "Faculty"}
 
 try:
     model_clf = joblib.load('xgb_risk_classifier.pkl')
@@ -113,9 +116,9 @@ except Exception as e:
 
 def get_risk_tier(prob, threshold=None):
     th = threshold if threshold else best_threshold
-    if prob >= th: return '🔴 HIGH'
-    if prob >= (th * 0.6): return '🟡 MODERATE' 
-    return '🟢 LOW'
+    if prob >= th: return 'HIGH'
+    if prob >= (th * 0.6): return 'MODERATE'
+    return 'LOW'
 
 # --- THE EXACT FEATURE ENGINEERING FROM THE IPYNB ---
 def preprocess_features(df, expected_features):
@@ -198,6 +201,82 @@ def list_students(db: Session = Depends(get_db), teacher_id: str = Depends(get_c
             print(f"Prediction Error in list_students: {e}") 
 
     return student_list
+
+
+@app.get("/hod/overview")
+def hod_overview(db: Session = Depends(get_db), requester: str = Depends(get_current_user_id)):
+    """HoD endpoint: returns per-teacher summary + aggregate metrics."""
+    # Verify requester is HoD
+    req_user = db.query(models.User).filter(models.User.username == requester).first()
+    if not req_user or (req_user.role or 'Faculty') != 'HoD':
+        raise HTTPException(status_code=403, detail="Access denied. HoD role required.")
+
+    # Get all faculty users
+    faculty_users = db.query(models.User).filter(models.User.role != 'HoD').all()
+    teachers_data = []
+
+    for faculty in faculty_users:
+        students = db.query(models.Student).filter(models.Student.teacher_id == faculty.username).all()
+        if not students:
+            continue
+
+        student_list = []
+        for s in students:
+            d = {c.name: getattr(s, c.name) for c in s.__table__.columns}
+            d['predicted_g3'] = '-'
+            student_list.append(d)
+
+        # Run predictions
+        if model_reg is not None and model_clf is not None and model_features is not None:
+            try:
+                df = pd.DataFrame(student_list)
+                df_final = preprocess_features(df, model_features)
+                preds = np.clip(model_reg.predict(df_final), 0, 20)
+                risk_probs = model_clf.predict_proba(df_final)[:, 1]
+                for i in range(len(student_list)):
+                    student_list[i]['predicted_g3'] = round(float(preds[i]), 1)
+                    student_list[i]['risk_score'] = float(risk_probs[i])
+                    student_list[i]['risk_category'] = get_risk_tier(float(risk_probs[i]))
+            except Exception as e:
+                print(f"HoD prediction error for {faculty.username}: {e}")
+
+        total = len(student_list)
+        high_risk = sum(1 for s in student_list if s.get('risk_category') == 'HIGH')
+        moderate_risk = sum(1 for s in student_list if s.get('risk_category') == 'MODERATE')
+        low_risk = sum(1 for s in student_list if s.get('risk_category') == 'LOW')
+        avg_risk = round(sum(s.get('risk_score', 0) for s in student_list) / total * 100, 1) if total else 0
+        avg_g1 = round(sum(s.get('G1', 0) or 0 for s in student_list) / total, 1) if total else 0
+        avg_g2 = round(sum(s.get('G2', 0) or 0 for s in student_list) / total, 1) if total else 0
+        avg_absences = round(sum(s.get('absences', 0) or 0 for s in student_list) / total, 1) if total else 0
+        pred_g3_vals = [s['predicted_g3'] for s in student_list if isinstance(s.get('predicted_g3'), (int, float))]
+        avg_pred_g3 = round(sum(pred_g3_vals) / len(pred_g3_vals), 1) if pred_g3_vals else 0
+
+        teachers_data.append({
+            'teacher_name': faculty.username,
+            'total_students': total,
+            'high_risk': high_risk,
+            'moderate_risk': moderate_risk,
+            'low_risk': low_risk,
+            'avg_risk_pct': avg_risk,
+            'avg_g1': avg_g1,
+            'avg_g2': avg_g2,
+            'avg_pred_g3': avg_pred_g3,
+            'avg_absences': avg_absences,
+        })
+
+    # Aggregate across all teachers
+    all_total = sum(t['total_students'] for t in teachers_data)
+    aggregate = {
+        'total_teachers': len(teachers_data),
+        'total_students': all_total,
+        'total_high_risk': sum(t['high_risk'] for t in teachers_data),
+        'total_moderate_risk': sum(t['moderate_risk'] for t in teachers_data),
+        'total_low_risk': sum(t['low_risk'] for t in teachers_data),
+        'avg_risk_pct': round(sum(t['avg_risk_pct'] * t['total_students'] for t in teachers_data) / all_total, 1) if all_total else 0,
+    }
+
+    return { 'teachers': teachers_data, 'aggregate': aggregate }
+
 
 @app.get("/students/{student_id}/insights")
 def get_insights(student_id: int, db: Session = Depends(get_db), teacher_id: str = Depends(get_current_user_id)):
@@ -301,10 +380,10 @@ def get_insights(student_id: int, db: Session = Depends(get_db), teacher_id: str
             print(f"Prediction/SHAP Error in insights: {e}")
 
     actions = []
-    if student.G1 < 10: actions.append("📚 G1 below pass - Schedule tutoring")
-    if student.absences > 5: actions.append("📋 High absences - Parent-Teacher meeting")
-    if student.studytime == 1: actions.append("⏰ Low study time - Time management workshop")
-    if not actions: actions.append("✅ Stable performance - Continue monitoring")
+    if student.G1 < 10: actions.append("≡ƒôÜ G1 below pass - Schedule tutoring")
+    if student.absences > 5: actions.append("≡ƒôï High absences - Parent-Teacher meeting")
+    if student.studytime == 1: actions.append("ΓÅ░ Low study time - Time management workshop")
+    if not actions: actions.append("Γ£à Stable performance - Continue monitoring")
 
     return {
         "student_info": {
@@ -331,6 +410,7 @@ def get_class_insights(db: Session = Depends(get_db), teacher_id: str = Depends(
     
     avg_pred_g3 = 0
     shap_graph_base64 = None
+    decision_plot_base64 = None
     metric_plots = {}
     engineered_metrics = {}
     
@@ -396,14 +476,151 @@ def get_class_insights(db: Session = Depends(get_db), teacher_id: str = Depends(
             buf.seek(0)
             shap_graph_base64 = base64.b64encode(buf.read()).decode('utf-8')
             plt.close()
-            
+
+            # --- SHAP Decision Plot ---
+            decision_plot_base64 = None
+            try:
+                # Use the expected_value from the classifier explainer
+                expected_value = explainer.expected_value
+                if isinstance(expected_value, (list, np.ndarray)):
+                    expected_value = float(expected_value[1]) if len(expected_value) > 1 else float(expected_value[0])
+                else:
+                    expected_value = float(expected_value)
+
+                # Cap at 50 students for readability
+                max_students = min(len(df_final), 50)
+                shap_subset = shap_vals_matrix[:max_students]
+
+                plt.figure(figsize=(11, 8))
+                shap.decision_plot(
+                    expected_value,
+                    shap_subset,
+                    feature_names=feature_names_friendly,
+                    show=False,
+                    highlight=None,
+                    plot_color='RdBu',
+                    auto_size_plot=False,
+                )
+                plt.title(
+                    f"SHAP Decision Plot — {max_students} Students",
+                    fontsize=13, fontweight='bold', color='#1f2937', pad=14
+                )
+                plt.tight_layout()
+                buf = io.BytesIO()
+                plt.savefig(buf, format='png', bbox_inches='tight', dpi=110)
+                buf.seek(0)
+                decision_plot_base64 = base64.b64encode(buf.read()).decode('utf-8')
+                plt.close()
+            except Exception as e:
+                print(f"Decision plot error: {e}")
+
         except Exception as e:
             print(f"Error in class insights: {e}")
-            
+
     return {
         "avg_g1": avg_g1, "avg_g2": avg_g2, "avg_pred_g3": avg_pred_g3, "avg_absences": avg_absences,
-        "engineered_metrics": engineered_metrics, "shap_graph_base64": shap_graph_base64
+        "engineered_metrics": engineered_metrics, "shap_graph_base64": shap_graph_base64,
+        "decision_plot_base64": decision_plot_base64
     }
+
+# --- Lazy on-demand SHAP decision plot with filtering ---
+from typing import Optional
+
+@app.get("/class/decision-plot")
+def get_filtered_decision_plot(
+    mode: str = "all",          # all | high | moderate | low | student
+    student_num: Optional[int] = None,
+    db: Session = Depends(get_db),
+    teacher_id: str = Depends(get_current_user_id)
+):
+    if not model_clf or model_features is None or explainer is None:
+        return {"plot": None, "title": "", "count": 0}
+
+    all_students = db.query(models.Student).filter(models.Student.teacher_id == teacher_id).all()
+    if not all_students:
+        return {"plot": None, "title": "No students", "count": 0}
+
+    # --- Filter / sort students by mode ---
+    if mode == "student":
+        if student_num is None:
+            return {"plot": None, "title": "No student number provided", "count": 0}
+        target_name = f"Student {student_num}"
+        filtered = [s for s in all_students if s.student_name == target_name]
+        if not filtered:
+            return {"plot": None, "title": f"Student {student_num} not found", "count": 0}
+        title = f"SHAP Decision Plot — {target_name}"
+    elif mode == "high":
+        sorted_s = sorted(all_students, key=lambda s: s.risk_score or 0, reverse=True)
+        filtered = [s for s in sorted_s if get_risk_tier(s.risk_score or 0) == 'HIGH'][:50]
+        title = f"SHAP Decision Plot — Top {len(filtered)} High Risk Students"
+    elif mode == "moderate":
+        sorted_s = sorted(all_students, key=lambda s: s.risk_score or 0, reverse=True)
+        filtered = [s for s in sorted_s if get_risk_tier(s.risk_score or 0) == 'MODERATE'][:50]
+        title = f"SHAP Decision Plot — Top {len(filtered)} Moderate Risk Students"
+    elif mode == "low":
+        sorted_s = sorted(all_students, key=lambda s: s.risk_score or 0)
+        filtered = [s for s in sorted_s if get_risk_tier(s.risk_score or 0) == 'LOW'][:50]
+        title = f"SHAP Decision Plot — Top {len(filtered)} Low Risk Students"
+    else:  # all
+        sorted_s = sorted(all_students, key=lambda s: s.risk_score or 0, reverse=True)
+        filtered = sorted_s[:50]
+        title = f"SHAP Decision Plot — All Students (Top {len(filtered)} by Risk)"
+
+    if not filtered:
+        return {"plot": None, "title": f"No students in '{mode}' category", "count": 0}
+
+    try:
+        student_list = [{c.name: getattr(s, c.name) for c in s.__table__.columns} for s in filtered]
+        df = pd.DataFrame(student_list)
+        df_final = preprocess_features(df, model_features)
+
+        shap_results = explainer.shap_values(df_final)
+        if isinstance(shap_results, list) and len(shap_results) > 1:
+            shap_matrix = shap_results[1]
+        elif isinstance(shap_results, list):
+            shap_matrix = shap_results[0]
+        else:
+            shap_matrix = shap_results
+
+        expected_value = explainer.expected_value
+        if isinstance(expected_value, (list, np.ndarray)):
+            expected_value = float(expected_value[1]) if len(expected_value) > 1 else float(expected_value[0])
+        else:
+            expected_value = float(expected_value)
+
+        feature_names_friendly = [FEATURE_LABELS.get(f, f) for f in model_features]
+
+        # Colour-code lines by risk tier
+        risk_scores = [s.risk_score or 0 for s in filtered]
+        line_colors = ['#ef4444' if get_risk_tier(r) == 'HIGH'
+                       else '#f59e0b' if get_risk_tier(r) == 'MODERATE'
+                       else '#10b981' for r in risk_scores]
+
+        plt.figure(figsize=(11, max(7, len(filtered) * 0.18 + 3)))
+        shap.decision_plot(
+            expected_value,
+            shap_matrix,
+            feature_names=feature_names_friendly,
+            show=False,
+            highlight=None,
+            plot_color='RdBu',
+            auto_size_plot=False,
+            color_bar=True,
+        )
+        plt.title(title, fontsize=12, fontweight='bold', color='#1f2937', pad=12)
+        plt.tight_layout()
+
+        buf = io.BytesIO()
+        plt.savefig(buf, format='png', bbox_inches='tight', dpi=110)
+        buf.seek(0)
+        plot_b64 = base64.b64encode(buf.read()).decode('utf-8')
+        plt.close()
+        return {"plot": plot_b64, "title": title, "count": len(filtered)}
+
+    except Exception as e:
+        print(f"Filtered decision plot error ({mode}): {e}")
+        return {"plot": None, "title": str(e), "count": 0}
+
 
 # --- Lazy on-demand scatter plot for a single engineered metric ---
 METRIC_PLOT_CONFIG = {

@@ -8,6 +8,7 @@ const AuthPage = () => {
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
+    const [role, setRole] = useState('Faculty');
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -18,7 +19,7 @@ const AuthPage = () => {
             if (isLoginMode) {
                 await login(username, password);
             } else {
-                await signup(username, password);
+                await signup(username, password, role);
             }
         } catch (err) {
             // This catches the beautiful custom errors from FastAPI!
@@ -64,6 +65,31 @@ const AuthPage = () => {
                         />
                     </div>
                     
+                    {!isLoginMode && (
+                        <div>
+                            <label style={{ display: 'block', marginBottom: '5px', color: '#374151', fontSize: '14px', fontWeight: 'bold' }}>Role</label>
+                            <div style={{ display: 'flex', gap: '10px' }}>
+                                {['Faculty', 'HoD'].map(r => (
+                                    <button
+                                        key={r}
+                                        type="button"
+                                        onClick={() => setRole(r)}
+                                        style={{
+                                            flex: 1, padding: '10px', borderRadius: '6px',
+                                            border: role === r ? '2px solid #2563eb' : '1px solid #d1d5db',
+                                            backgroundColor: role === r ? '#eff6ff' : 'white',
+                                            color: role === r ? '#2563eb' : '#6b7280',
+                                            fontWeight: role === r ? 'bold' : 'normal',
+                                            cursor: 'pointer', fontSize: '14px'
+                                        }}
+                                    >
+                                        {r === 'HoD' ? 'Head of Department' : 'Faculty'}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
                     <button 
                         type="submit" 
                         disabled={loading}

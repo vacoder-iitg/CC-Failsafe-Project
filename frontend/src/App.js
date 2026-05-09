@@ -5,6 +5,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AuthProvider, AuthContext } from './context/AuthContext';
 import AuthPage from './components/AuthPage'; 
 import Dashboard from './components/Dashboard';
+import HodDashboard from './components/HodDashboard';
 import StudentProfile from './components/StudentProfile';
 
 // The Bouncer Component: Kicks unauthenticated users back to login
@@ -22,6 +23,10 @@ const ProtectedRoute = ({ children }) => {
 const AuthWrapper = () => {
     const { user } = useContext(AuthContext);
     if (user) {
+        // Route based on role
+        if (user.role === 'HoD') {
+            return <Navigate to="/hod" replace />;
+        }
         return <Navigate to="/dashboard" replace />;
     }
     return <AuthPage />;
@@ -35,12 +40,21 @@ const App = () => {
                     {/* The public login route */}
                     <Route path="/" element={<AuthWrapper />} />
 
-                    {/* The locked private routes */}
+                    {/* Faculty dashboard */}
                     <Route 
                         path="/dashboard" 
                         element={
                             <ProtectedRoute>
                                 <Dashboard />
+                            </ProtectedRoute>
+                        } 
+                    />
+                    {/* HoD dashboard */}
+                    <Route 
+                        path="/hod" 
+                        element={
+                            <ProtectedRoute>
+                                <HodDashboard />
                             </ProtectedRoute>
                         } 
                     />

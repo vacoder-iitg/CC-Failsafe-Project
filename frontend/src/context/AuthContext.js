@@ -29,18 +29,18 @@ export const AuthProvider = ({ children }) => {
         localStorage.setItem('token', data.token); // Saving token separately makes API calls easier
     };
 
-    const signup = async (username, password) => {
+    const signup = async (username, password, role = 'Faculty') => {
         const response = await fetch('http://localhost:8000/signup', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username, password })
+            body: JSON.stringify({ username, password, role })
         });
         
         const data = await response.json();
         if (!response.ok) throw new Error(data.detail); 
         
         // Auto-login after successful signup
-        const userData = { username: username, role: 'Faculty', token: username };
+        const userData = { username: username, role: role, token: username };
         
         // Save to React state AND to the browser's permanent storage
         setUser(userData);
