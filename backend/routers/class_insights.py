@@ -9,6 +9,10 @@ import shap
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+import threading
+
+# Global lock to prevent Matplotlib thread collisions (which cause blank/vanished graphs)
+plt_lock = threading.Lock()
 
 import models
 from dependencies import get_db, get_current_user_id
@@ -78,62 +82,28 @@ def get_class_insights(db: Session = Depends(get_db), teacher_id: str = Depends(
                 values.append(val)
                 colors.append(color)
 
-            plt.figure(figsize=(10, 7))
-            bars = plt.barh(labels, values, color=colors, edgecolor='none')
-            plt.axvline(0, color='gray', linewidth=1, linestyle='--')
-            plt.title("Class-Wide Average Risk Drivers", fontsize=14, pad=20)
-            plt.xlabel("Average Impact on Risk Probability", fontsize=12)
-            for spine in plt.gca().spines.values():
-                spine.set_visible(False)
-            plt.grid(axis='x', linestyle='--', alpha=0.5)
-            for bar, val in zip(bars, values):
-                x_offset = 0.005 if val > 0 else -0.005
-                ha = 'left' if val > 0 else 'right'
-                plt.text(val + x_offset, bar.get_y() + bar.get_height()/2,
-                         f"{val:+.3f}", va='center', ha=ha, fontsize=10, fontweight='bold', color='#333333')
-            plt.tight_layout()
-            buf = io.BytesIO()
-            plt.savefig(buf, format='png', bbox_inches='tight', transparent=True)
-            buf.seek(0)
-            shap_graph_base64 = base64.b64encode(buf.read()).decode('utf-8')
-            plt.close()
-
-            # --- SHAP Decision Plot ---
-            decision_plot_base64 = None
-            try:
-                # Use the expected_value from the classifier explainer
-                expected_value = explainer.expected_value
-                if isinstance(expected_value, (list, np.ndarray)):
-                    expected_value = float(expected_value[1]) if len(expected_value) > 1 else float(expected_value[0])
-                else:
-                    expected_value = float(expected_value)
-
-                # Cap at 50 students for readability
-                max_students = min(len(df_final), 50)
-                shap_subset = shap_vals_matrix[:max_students]
-
-                plt.figure(figsize=(11, 8))
-                shap.decision_plot(
-                    expected_value,
-                    shap_subset,
-                    feature_names=feature_names_friendly,
-                    show=False,
-                    highlight=None,
-                    plot_color='RdBu',
-                    auto_size_plot=False,
-                )
-                plt.title(
-                    f"SHAP Decision Plot — {max_students} Students",
-                    fontsize=13, fontweight='bold', color='#1f2937', pad=14
-                )
+            with plt_lock:
+                plt.figure(figsize=(10, 7))
+                bars = plt.barh(labels, values, color=colors, edgecolor='none')
+                plt.axvline(0, color='gray', linewidth=1, linestyle='--')
+                plt.title("Class-Wide Average Risk Drivers", fontsize=14, pad=20)
+                plt.xlabel("Average Impact on Risk Probability", fontsize=12)
+                for spine in plt.gca().spines.values():
+                    spine.set_visible(False)
+                plt.grid(axis='x', linestyle='--', alpha=0.5)
+                for bar, val in zip(bars, values):
+                    x_offset = 0.005 if val > 0 else -0.005
+                    ha = 'left' if val > 0 else 'right'
+                    plt.text(val + x_offset, bar.get_y() + bar.get_height()/2,
+                             f"{val:+.3f}", va='center', ha=ha, fontsize=10, fontweight='bold', color='#333333')
                 plt.tight_layout()
                 buf = io.BytesIO()
-                plt.savefig(buf, format='png', bbox_inches='tight', dpi=110)
+                plt.savefig(buf, format='png', bbox_inches='tight', transparent=True)
                 buf.seek(0)
-                decision_plot_base64 = base64.b64encode(buf.read()).decode('utf-8')
+                shap_graph_base64 = base64.b64encode(buf.read()).decode('utf-8')
                 plt.close()
-            except Exception as e:
-                print(f"Decision plot error: {e}")
+
+            # --- SHAP Decision Plot is now dynamically fetched via /class/decision-plot endpoint ---
 
         except Exception as e:
             print(f"Error in class insights: {e}")
@@ -216,79 +186,80 @@ def get_filtered_decision_plot(
 
         is_single = (mode == 'student' and len(filtered) == 1)
 
-        plt.figure(figsize=(11, max(7, len(filtered) * 0.18 + 3)))
-        shap.decision_plot(
-            expected_value,
-            shap_matrix,
-            feature_names=feature_names_friendly,
-            show=False,
-            highlight=None,
-            plot_color='RdBu',
-            auto_size_plot=False,
-            color_bar=not is_single,  # hide colorbar for single student; we show our own badge
-        )
-
-        # ── Post-process: recolour every SHAP polyline by risk tier ──────────
-        # shap.decision_plot uses RdBu; near-zero values render almost white.
-        # We grab all drawn Line2D objects and recolour them ourselves.
-        ax = plt.gca()
-        data_lines = [l for l in ax.get_lines() if len(l.get_xdata()) > 3]
-        for idx, line in enumerate(data_lines):
-            if idx < len(line_colors):
-                line.set_color(line_colors[idx])
-                line.set_linewidth(3.5 if is_single else 1.6)
-                line.set_alpha(1.0 if is_single else 0.75)
-
-        # ── Single-student: annotation card + plain-English legend ───────────
-        if is_single:
-            risk_prob  = risk_scores[0]
-            risk_tier  = get_risk_tier(risk_prob)
-            tier_color = {'HIGH': '#ef4444', 'MODERATE': '#f59e0b', 'LOW': '#10b981'}[risk_tier]
-            tier_label = {'HIGH': '⚠  HIGH RISK', 'MODERATE': '~  MODERATE RISK', 'LOW': '✓  LOW RISK'}[risk_tier]
-            interp     = {
-                'HIGH':     'Several features are pushing risk upward.\nImmediate academic support is recommended.',
-                'MODERATE': 'Some risk factors detected. Monitor closely\nand consider early intervention.',
-                'LOW':      'Mostly protective factors present.\nContinue current support strategies.',
-            }[risk_tier]
-            card = f"  {tier_label}  \n  Risk Probability: {risk_prob * 100:.1f}%  \n\n  {interp}  "
-            ax.text(
-                0.985, 0.015, card,
-                transform=ax.transAxes,
-                fontsize=9.5, verticalalignment='bottom', horizontalalignment='right',
-                multialignment='left',
-                bbox=dict(boxstyle='round,pad=0.6', facecolor=tier_color,
-                          alpha=0.13, edgecolor=tier_color, linewidth=1.8),
-                color='#1f2937',
-            )
-            from matplotlib.lines import Line2D
-            ax.legend(
-                handles=[
-                    Line2D([0], [0], color=tier_color, linewidth=3,
-                           label=f"Student path — {risk_tier} risk"),
-                    Line2D([0], [0], color='gray', linewidth=1, linestyle='--',
-                           label='Base rate (model average)'),
-                ],
-                loc='upper left', fontsize=9, framealpha=0.88, edgecolor='#d1d5db'
-            )
-        else:
-            from matplotlib.lines import Line2D
-            ax.legend(
-                handles=[
-                    Line2D([0], [0], color='#ef4444', linewidth=2.5, label='High Risk'),
-                    Line2D([0], [0], color='#f59e0b', linewidth=2.5, label='Moderate Risk'),
-                    Line2D([0], [0], color='#10b981', linewidth=2.5, label='Low Risk'),
-                ],
-                loc='upper left', fontsize=9, framealpha=0.88, edgecolor='#d1d5db'
+        with plt_lock:
+            plt.figure(figsize=(11, max(7, len(filtered) * 0.18 + 3)))
+            shap.decision_plot(
+                expected_value,
+                shap_matrix,
+                feature_names=feature_names_friendly,
+                show=False,
+                highlight=None,
+                plot_color='RdBu',
+                auto_size_plot=False,
+                color_bar=not is_single,  # hide colorbar for single student; we show our own badge
             )
 
-        plt.title(title, fontsize=12, fontweight='bold', color='#1f2937', pad=12)
-        plt.tight_layout()
+            # ── Post-process: recolour every SHAP polyline by risk tier ──────────
+            # shap.decision_plot uses RdBu; near-zero values render almost white.
+            # We grab all drawn Line2D objects and recolour them ourselves.
+            ax = plt.gca()
+            data_lines = [l for l in ax.get_lines() if len(l.get_xdata()) > 3]
+            for idx, line in enumerate(data_lines):
+                if idx < len(line_colors):
+                    line.set_color(line_colors[idx])
+                    line.set_linewidth(3.5 if is_single else 1.6)
+                    line.set_alpha(1.0 if is_single else 0.75)
 
-        buf = io.BytesIO()
-        plt.savefig(buf, format='png', bbox_inches='tight', dpi=110)
-        buf.seek(0)
-        plot_b64 = base64.b64encode(buf.read()).decode('utf-8')
-        plt.close()
+            # ── Single-student: annotation card + plain-English legend ───────────
+            if is_single:
+                risk_prob  = risk_scores[0]
+                risk_tier  = get_risk_tier(risk_prob)
+                tier_color = {'HIGH': '#ef4444', 'MODERATE': '#f59e0b', 'LOW': '#10b981'}[risk_tier]
+                tier_label = {'HIGH': '⚠  HIGH RISK', 'MODERATE': '~  MODERATE RISK', 'LOW': '✓  LOW RISK'}[risk_tier]
+                interp     = {
+                    'HIGH':     'Several features are pushing risk upward.\nImmediate academic support is recommended.',
+                    'MODERATE': 'Some risk factors detected. Monitor closely\nand consider early intervention.',
+                    'LOW':      'Mostly protective factors present.\nContinue current support strategies.',
+                }[risk_tier]
+                card = f"  {tier_label}  \n  Risk Probability: {risk_prob * 100:.1f}%  \n\n  {interp}  "
+                ax.text(
+                    0.985, 0.015, card,
+                    transform=ax.transAxes,
+                    fontsize=9.5, verticalalignment='bottom', horizontalalignment='right',
+                    multialignment='left',
+                    bbox=dict(boxstyle='round,pad=0.6', facecolor=tier_color,
+                              alpha=0.13, edgecolor=tier_color, linewidth=1.8),
+                    color='#1f2937',
+                )
+                from matplotlib.lines import Line2D
+                ax.legend(
+                    handles=[
+                        Line2D([0], [0], color=tier_color, linewidth=3,
+                               label=f"Student path — {risk_tier} risk"),
+                        Line2D([0], [0], color='gray', linewidth=1, linestyle='--',
+                               label='Base rate (model average)'),
+                    ],
+                    loc='upper left', fontsize=9, framealpha=0.88, edgecolor='#d1d5db'
+                )
+            else:
+                from matplotlib.lines import Line2D
+                ax.legend(
+                    handles=[
+                        Line2D([0], [0], color='#ef4444', linewidth=2.5, label='High Risk'),
+                        Line2D([0], [0], color='#f59e0b', linewidth=2.5, label='Moderate Risk'),
+                        Line2D([0], [0], color='#10b981', linewidth=2.5, label='Low Risk'),
+                    ],
+                    loc='upper left', fontsize=9, framealpha=0.88, edgecolor='#d1d5db'
+                )
+
+            plt.title(title, fontsize=12, fontweight='bold', color='#1f2937', pad=12)
+            plt.tight_layout()
+
+            buf = io.BytesIO()
+            plt.savefig(buf, format='png', bbox_inches='tight', dpi=110)
+            buf.seek(0)
+            plot_b64 = base64.b64encode(buf.read()).decode('utf-8')
+            plt.close()
         return {"plot": plot_b64, "title": title, "count": len(filtered)}
 
     except Exception as e:

@@ -1,17 +1,22 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 const GlobalRiskFactors = ({ classInsights, loadingInsights, user }) => {
     // Decision plot interactive state
-    const [dpMode, setDpMode] = useState('all');
+    const [dpMode, setDpMode] = useState('high');
     const [dpStudentInput, setDpStudentInput] = useState('');
     const [dpCache, setDpCache] = useState({});       // cacheKey -> { plot, title, count }
     const [dpLoading, setDpLoading] = useState(false);
     const [dpError, setDpError] = useState('');
+    const [lastFetchedKey, setLastFetchedKey] = useState('high');
 
     const fetchDecisionPlot = (mode, studentNum, token) => {
         const cacheKey = mode === 'student' ? `student_${studentNum}` : mode;
-        if (dpCache[cacheKey]) { setDpMode(mode); setDpError(''); return; }
         setDpMode(mode);
+        if (dpCache[cacheKey]) { 
+            setLastFetchedKey(cacheKey);
+            setDpError(''); 
+            return; 
+        }
         setDpLoading(true);
         setDpError('');
         const params = mode === 'student' ? `?mode=student&student_num=${studentNum}` : `?mode=${mode}`;
@@ -21,11 +26,26 @@ const GlobalRiskFactors = ({ classInsights, loadingInsights, user }) => {
             .then(res => res.json())
             .then(data => {
                 if (!data.plot) setDpError(data.title || 'No data returned');
-                else setDpCache(prev => ({ ...prev, [cacheKey]: data }));
+                else {
+                    setDpCache(prev => ({ ...prev, [cacheKey]: data }));
+                    setLastFetchedKey(cacheKey);
+                }
                 setDpLoading(false);
             })
             .catch(() => { setDpError('Failed to fetch decision plot'); setDpLoading(false); });
     };
+
+    useEffect(() => {
+        if (classInsights && !dpCache['high'] && !dpLoading) {
+            // Slight delay to ensure parent component's initial fetch is fully resolved
+            // and to prevent any overlapping requests when the dashboard first mounts.
+            const timer = setTimeout(() => {
+                fetchDecisionPlot('high', null, user?.token);
+            }, 500);
+            return () => clearTimeout(timer);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [classInsights, user?.token]);
 
     if (loadingInsights || !classInsights) {
         return <div style={{ padding: '40px', textAlign: 'center', color: '#6b7280' }}>Loading model insights...</div>;
@@ -58,13 +78,11 @@ const GlobalRiskFactors = ({ classInsights, loadingInsights, user }) => {
             </div>
 
             {/* Card 2: SHAP Decision Plot — Interactive */}
-            {classInsights.decision_plot_base64 && (() => {
-                const dpCacheKey = dpMode === 'student' ? `student_${dpStudentInput}` : dpMode;
-                const dpData = dpCache[dpCacheKey];
+            {(() => {
+                const dpData = dpCache[lastFetchedKey];
                 const displayPlot = dpData ? dpData.plot : classInsights.decision_plot_base64;
 
                 const MODE_BTNS = [
-                    { key: 'all',      label: 'All Students',  icon: 'groups',          color: '#6366f1', bg: '#eef2ff' },
                     { key: 'high',     label: 'High Risk',     icon: 'emergency_home',  color: '#ef4444', bg: '#fef2f2' },
                     { key: 'moderate', label: 'Moderate Risk', icon: 'warning',         color: '#f59e0b', bg: '#fffbeb' },
                     { key: 'low',      label: 'Low Risk',      icon: 'check_circle',    color: '#10b981', bg: '#ecfdf5' },
@@ -125,26 +143,27 @@ const GlobalRiskFactors = ({ classInsights, loadingInsights, user }) => {
                         </div>
 
                         {/* Result area */}
-                        {dpLoading ? (
-                            <div style={{ padding: '40px', textAlign: 'center', color: '#6b7280' }}>
-                                <span className="material-symbols-outlined" style={{ fontSize: '40px', display: 'block', marginBottom: '8px' }}>hourglass_empty</span>
-                                Generating decision plot...
-                            </div>
-                        ) : dpError ? (
+                        {dpError ? (
                             <div style={{ padding: '20px', textAlign: 'center', color: '#ef4444', backgroundColor: '#fef2f2', borderRadius: '8px', fontSize: '14px' }}>
                                 <span className="material-symbols-outlined" style={{ verticalAlign: 'middle', marginRight: '6px' }}>error</span>
                                 {dpError}
                             </div>
-                        ) : (
+                        ) : displayPlot ? (
                             <div style={{ textAlign: 'center' }}>
-                                {dpData && <p style={{ color: '#6b7280', fontSize: '12px', marginBottom: '12px' }}>{dpData.title} · {dpData.count} student{dpData.count !== 1 ? 's' : ''}</p>}
+                                {dpLoading && <p style={{ color: '#8b5cf6', fontWeight: 'bold', fontSize: '13px', marginBottom: '8px' }}>Loading new graph...</p>}
+                                {dpData && !dpLoading && <p style={{ color: '#6b7280', fontSize: '12px', marginBottom: '12px' }}>{dpData.title} · {dpData.count} student{dpData.count !== 1 ? 's' : ''}</p>}
                                 <img
                                     src={`data:image/png;base64,${displayPlot}`}
                                     alt="SHAP Decision Plot"
-                                    style={{ maxWidth: '100%', height: 'auto', borderRadius: '6px' }}
+                                    style={{ maxWidth: '100%', height: 'auto', borderRadius: '6px', opacity: dpLoading ? 0.6 : 1, transition: 'opacity 0.2s' }}
                                 />
                             </div>
-                        )}
+                        ) : dpLoading ? (
+                            <div style={{ padding: '40px', textAlign: 'center', color: '#6b7280' }}>
+                                <span className="material-symbols-outlined" style={{ fontSize: '40px', display: 'block', marginBottom: '8px' }}>hourglass_empty</span>
+                                Generating decision plot...
+                            </div>
+                        ) : null}
                     </div>
                 );
             })()}
