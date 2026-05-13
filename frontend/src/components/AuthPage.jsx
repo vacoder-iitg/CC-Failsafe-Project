@@ -1,5 +1,5 @@
 import React, { useState, useContext } from 'react';
-import { AuthContext } from '../context/AuthContext'; // Adjust path if your folder structure is different
+import { AuthContext } from '../context/AuthContext';
 
 const AuthPage = () => {
     const { login, signup } = useContext(AuthContext);
@@ -17,93 +17,216 @@ const AuthPage = () => {
 
         try {
             if (isLoginMode) {
-                await login(username, password);
+                await login(username, password, role);
             } else {
                 await signup(username, password, role);
             }
         } catch (err) {
-            // This catches the beautiful custom errors from FastAPI!
             setError(err.message); 
         } finally {
             setLoading(false);
         }
     };
 
+    const isHod = role === 'HoD';
+    const primaryColor = isHod ? '#f59e0b' : '#6366f1';
+    const gradient = isHod 
+        ? 'linear-gradient(135deg, #f59e0b 0%, #ef4444 100%)' 
+        : 'linear-gradient(135deg, #818cf8 0%, #c084fc 100%)';
+    const logoIcon = isHod ? 'shield_person' : 'school';
+
     return (
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', backgroundColor: '#f3f4f6', fontFamily: 'sans-serif' }}>
-            <div style={{ backgroundColor: 'white', padding: '40px', borderRadius: '8px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)', width: '100%', maxWidth: '400px' }}>
-                <h1 style={{ textAlign: 'center', color: '#1f2937', marginBottom: '10px' }}>FAILSAFE Engine</h1>
-                <h3 style={{ textAlign: 'center', color: '#6b7280', marginTop: 0, marginBottom: '30px', fontWeight: 'normal' }}>
-                    {isLoginMode ? 'Sign in to access your secure vault' : 'Create a new faculty account'}
-                </h3>
+        <div style={{ 
+            display: 'flex', 
+            justifyContent: 'center', 
+            alignItems: 'center', 
+            minHeight: '100vh', 
+            backgroundColor: '#f8fafc',
+            backgroundImage: 'url("auth-bg.png")', // Simplified path
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            backgroundRepeat: 'no-repeat',
+            fontFamily: "'Inter', 'Segoe UI', sans-serif",
+            padding: '20px'
+        }}>
+            {/* Glassmorphism Card */}
+            <div style={{ 
+                backgroundColor: 'rgba(255, 255, 255, 0.75)', 
+                backdropFilter: 'blur(12px)',
+                WebkitBackdropFilter: 'blur(12px)',
+                padding: '48px 40px', 
+                borderRadius: '32px', 
+                boxShadow: '0 25px 50px -12px rgba(0,0,0,0.15)', 
+                width: '100%', 
+                maxWidth: '420px',
+                border: '1px solid rgba(255, 255, 255, 0.4)',
+                textAlign: 'center'
+            }}>
+                {/* Dynamic Logo Section */}
+                <div style={{ marginBottom: '32px' }}>
+                    <div style={{ 
+                        width: '64px', 
+                        height: '64px', 
+                        borderRadius: '20px', 
+                        background: gradient, 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'center',
+                        margin: '0 auto 16px',
+                        boxShadow: `0 10px 25px ${isHod ? 'rgba(245,158,11,0.3)' : 'rgba(99,102,241,0.3)'}`
+                    }}>
+                        <span className="material-symbols-outlined" style={{ fontSize: '32px', color: 'white' }}>
+                            {logoIcon}
+                        </span>
+                    </div>
+                    <h1 style={{ margin: 0, fontSize: '30px', color: '#1e293b', fontWeight: '900', letterSpacing: '-0.04em' }}>
+                        FAILSAFE
+                    </h1>
+                    <p style={{ margin: '8px 0 0', color: '#475569', fontSize: '15px', fontWeight: '500' }}>
+                        {isLoginMode ? `Secure ${role} Access` : `Create ${role} Account`}
+                    </p>
+                </div>
+
+                {/* Role Selector */}
+                <div style={{ 
+                    display: 'flex', 
+                    background: 'rgba(0, 0, 0, 0.05)', 
+                    padding: '4px', 
+                    borderRadius: '14px', 
+                    marginBottom: '32px' 
+                }}>
+                    {['Faculty', 'HoD'].map(r => (
+                        <button
+                            key={r}
+                            type="button"
+                            onClick={() => setRole(r)}
+                            style={{
+                                flex: 1,
+                                padding: '12px',
+                                borderRadius: '10px',
+                                border: 'none',
+                                backgroundColor: role === r ? 'white' : 'transparent',
+                                color: role === r ? '#0f172a' : '#64748b',
+                                fontWeight: '700',
+                                cursor: 'pointer',
+                                fontSize: '14px',
+                                boxShadow: role === r ? '0 4px 12px rgba(0,0,0,0.08)' : 'none',
+                                transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)'
+                            }}
+                        >
+                            {r}
+                        </button>
+                    ))}
+                </div>
 
                 {error && (
-                    <div style={{ backgroundColor: '#fee2e2', color: '#b91c1c', padding: '12px', borderRadius: '6px', marginBottom: '20px', fontSize: '14px', fontWeight: 'bold', textAlign: 'center', border: '1px solid #fca5a5' }}>
+                    <div style={{ 
+                        backgroundColor: 'rgba(225, 29, 72, 0.1)', 
+                        color: '#e11d48', 
+                        padding: '14px', 
+                        borderRadius: '14px', 
+                        marginBottom: '24px', 
+                        fontSize: '13px', 
+                        fontWeight: '600', 
+                        border: '1px solid rgba(225, 29, 72, 0.2)' 
+                    }}>
                         {error}
                     </div>
                 )}
 
-                <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px', textAlign: 'left' }}>
                     <div>
-                        <label style={{ display: 'block', marginBottom: '5px', color: '#374151', fontSize: '14px', fontWeight: 'bold' }}>Username</label>
-                        <input 
-                            type="text" 
-                            required
-                            value={username} 
-                            onChange={(e) => setUsername(e.target.value)} 
-                            style={{ width: '93%', padding: '10px', borderRadius: '6px', border: '1px solid #d1d5db' }}
-                        />
-                    </div>
-                    <div>
-                        <label style={{ display: 'block', marginBottom: '5px', color: '#374151', fontSize: '14px', fontWeight: 'bold' }}>Password</label>
-                        <input 
-                            type="password" 
-                            required
-                            value={password} 
-                            onChange={(e) => setPassword(e.target.value)} 
-                            style={{ width: '93%', padding: '10px', borderRadius: '6px', border: '1px solid #d1d5db' }}
-                        />
-                    </div>
-                    
-                    {!isLoginMode && (
-                        <div>
-                            <label style={{ display: 'block', marginBottom: '5px', color: '#374151', fontSize: '14px', fontWeight: 'bold' }}>Role</label>
-                            <div style={{ display: 'flex', gap: '10px' }}>
-                                {['Faculty', 'HoD'].map(r => (
-                                    <button
-                                        key={r}
-                                        type="button"
-                                        onClick={() => setRole(r)}
-                                        style={{
-                                            flex: 1, padding: '10px', borderRadius: '6px',
-                                            border: role === r ? '2px solid #2563eb' : '1px solid #d1d5db',
-                                            backgroundColor: role === r ? '#eff6ff' : 'white',
-                                            color: role === r ? '#2563eb' : '#6b7280',
-                                            fontWeight: role === r ? 'bold' : 'normal',
-                                            cursor: 'pointer', fontSize: '14px'
-                                        }}
-                                    >
-                                        {r === 'HoD' ? 'Head of Department' : 'Faculty'}
-                                    </button>
-                                ))}
-                            </div>
+                        <label style={{ display: 'block', marginBottom: '8px', color: '#334155', fontSize: '13px', fontWeight: '700', marginLeft: '4px' }}>Username</label>
+                        <div style={{ position: 'relative' }}>
+                            <span className="material-symbols-outlined" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: '#64748b', fontSize: '20px' }}>person</span>
+                            <input 
+                                type="text" 
+                                required
+                                value={username} 
+                                onChange={(e) => setUsername(e.target.value)} 
+                                placeholder="Enter your username"
+                                style={{ 
+                                    width: '100%', 
+                                    padding: '14px 14px 14px 44px', 
+                                    borderRadius: '14px', 
+                                    border: '1px solid rgba(0,0,0,0.1)',
+                                    backgroundColor: 'rgba(255,255,255,0.5)',
+                                    fontSize: '15px',
+                                    boxSizing: 'border-box',
+                                    outline: 'none',
+                                    transition: 'all 0.2s'
+                                }}
+                                onFocus={e => { e.target.style.borderColor = primaryColor; e.target.style.backgroundColor = 'white'; }}
+                                onBlur={e => { e.target.style.borderColor = 'rgba(0,0,0,0.1)'; e.target.style.backgroundColor = 'rgba(255,255,255,0.5)'; }}
+                            />
                         </div>
-                    )}
+                    </div>
+
+                    <div>
+                        <label style={{ display: 'block', marginBottom: '8px', color: '#334155', fontSize: '13px', fontWeight: '700', marginLeft: '4px' }}>Password</label>
+                        <div style={{ position: 'relative' }}>
+                            <span className="material-symbols-outlined" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: '#64748b', fontSize: '20px' }}>lock</span>
+                            <input 
+                                type="password" 
+                                required
+                                value={password} 
+                                onChange={(e) => setPassword(e.target.value)} 
+                                placeholder="••••••••"
+                                style={{ 
+                                    width: '100%', 
+                                    padding: '14px 14px 14px 44px', 
+                                    borderRadius: '14px', 
+                                    border: '1px solid rgba(0,0,0,0.1)',
+                                    backgroundColor: 'rgba(255,255,255,0.5)',
+                                    fontSize: '15px',
+                                    boxSizing: 'border-box',
+                                    outline: 'none',
+                                    transition: 'all 0.2s'
+                                }}
+                                onFocus={e => { e.target.style.borderColor = primaryColor; e.target.style.backgroundColor = 'white'; }}
+                                onBlur={e => { e.target.style.borderColor = 'rgba(0,0,0,0.1)'; e.target.style.backgroundColor = 'rgba(255,255,255,0.5)'; }}
+                            />
+                        </div>
+                    </div>
 
                     <button 
                         type="submit" 
                         disabled={loading}
-                        style={{ padding: '12px', marginTop: '10px', backgroundColor: '#2563eb', color: 'white', border: 'none', borderRadius: '6px', cursor: loading ? 'not-allowed' : 'pointer', fontWeight: 'bold', fontSize: '16px' }}>
+                        style={{ 
+                            padding: '16px', 
+                            marginTop: '10px', 
+                            background: gradient, 
+                            color: 'white', 
+                            border: 'none', 
+                            borderRadius: '14px', 
+                            cursor: loading ? 'not-allowed' : 'pointer', 
+                            fontWeight: '800', 
+                            fontSize: '16px',
+                            boxShadow: `0 12px 20px -5px ${isHod ? 'rgba(245,158,11,0.4)' : 'rgba(99,102,241,0.4)'}`,
+                            transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
+                        }}
+                        onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.opacity = '0.95'; }}
+                        onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.opacity = '1'; }}
+                        onMouseDown={e => e.currentTarget.style.transform = 'scale(0.98)'}
+                        onMouseUp={e => e.currentTarget.style.transform = 'scale(1)'}
+                    >
                         {loading ? 'Processing...' : (isLoginMode ? 'Secure Login' : 'Create Account')}
                     </button>
                 </form>
 
-                <div style={{ textAlign: 'center', marginTop: '20px' }}>
-                    <p style={{ color: '#6b7280', fontSize: '14px' }}>
+                <div style={{ marginTop: '32px' }}>
+                    <p style={{ color: '#64748b', fontSize: '14px', fontWeight: '600' }}>
                         {isLoginMode ? "Don't have an account? " : "Already have an account? "}
                         <span 
                             onClick={() => { setIsLoginMode(!isLoginMode); setError(''); }} 
-                            style={{ color: '#2563eb', cursor: 'pointer', fontWeight: 'bold' }}>
+                            style={{ 
+                                color: primaryColor, 
+                                cursor: 'pointer', 
+                                fontWeight: '800',
+                                marginLeft: '6px',
+                                textDecoration: 'underline',
+                                textUnderlineOffset: '4px'
+                            }}>
                             {isLoginMode ? 'Sign Up' : 'Log In'}
                         </span>
                     </p>
@@ -114,3 +237,5 @@ const AuthPage = () => {
 };
 
 export default AuthPage;
+
+

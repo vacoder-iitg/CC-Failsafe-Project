@@ -27,6 +27,16 @@ def login_user(user: UserAuth, db: Session = Depends(get_db)):
     db_user = db.query(models.User).filter(models.User.username == user.username).first()
     if not db_user:
         raise HTTPException(status_code=404, detail="User not found. Please create an account.")
+    
     if db_user.password != user.password:
         raise HTTPException(status_code=401, detail="Incorrect password.")
+    
+    # NEW: Verify role matches
+    if db_user.role != user.role:
+        role_display = "Head of Department" if db_user.role == "HoD" else "Faculty"
+        raise HTTPException(
+            status_code=403, 
+            detail=f"Access Denied. This account is registered as {role_display}. Please select the correct role above."
+        )
+
     return {"token": db_user.username, "role": db_user.role or "Faculty"}
