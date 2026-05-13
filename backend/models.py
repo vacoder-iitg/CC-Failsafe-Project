@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float
+from sqlalchemy import Column, Integer, String, Float, Text
 from database import Base
 
 class User(Base):
@@ -48,3 +48,11 @@ class Student(Base):
     # Model Outputs
     risk_score = Column(Float)
     risk_category = Column(String)
+
+class MLCache(Base):
+    __tablename__ = "ml_cache"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    teacher_id = Column(String, index=True)
+    cache_key = Column(String, index=True) # e.g. "insights" or "dp_high"
+    data_json = Column(Text) # Stores the serialized JSON result (base64 graphs, etc.)
