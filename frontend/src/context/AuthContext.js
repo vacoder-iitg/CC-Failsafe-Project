@@ -10,11 +10,11 @@ export const AuthProvider = ({ children }) => {
         return savedUser ? JSON.parse(savedUser) : null;
     });
 
-    const login = async (username, password) => {
+    const login = async (username, password, role) => {
         const response = await fetch('http://localhost:8000/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username, password })
+            body: JSON.stringify({ username, password, role })
         });
         
         const data = await response.json();
