@@ -31,28 +31,65 @@ const TeacherDashboard = React.memo(({ students, loading, classInsights, loading
                     padding: 12px 16px;
                     background: none;
                     border: none;
-                    border-bottom: 3px solid transparent;
                     color: #6b7280;
                     cursor: pointer;
                     font-size: 16px;
-                    transition: all 0.2s ease-in-out;
+                    position: relative; /* Required for the animated underline */
+                    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
                     outline: none;
+                    border-radius: 8px 8px 0 0;
                 }
+
+                /* 1. Hover Effect: Slight lift and text color change */
                 .dashboard-tab:hover:not(.active) {
-                    color: #4b5563;
-                    background-color: #f3f4f6;
-                    border-radius: 4px 4px 0 0;
+                    color: #1f2937;
+                    background-color: rgba(243, 244, 246, 0.7);
+                    transform: translateY(-2px); 
                 }
+
+                /* 2. Click Effect: Tactile press down */
+                .dashboard-tab:active {
+                    transform: scale(0.95);
+                }
+
+                /* 3. Active State */
                 .dashboard-tab.active {
-                    border-bottom: 3px solid #3b82f6;
-                    color: #111827;
+                    color: #3b82f6; /* Blue text when active */
                     font-weight: bold;
                 }
-                .tab-content-container {
-                    animation: fadeInTab 0.3s ease-out;
+
+                /* 4. The Animated Underline (Base State) */
+                .dashboard-tab::after {
+                    content: '';
+                    position: absolute;
+                    bottom: 0;
+                    left: 50%;
+                    width: 0; /* Starts hidden */
+                    height: 3px;
+                    background-color: #3b82f6;
+                    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                    transform: translateX(-50%); /* Keeps it centered */
+                    border-radius: 3px 3px 0 0;
                 }
+
+                /* 5. Underline expands to 100% when active */
+                .dashboard-tab.active::after {
+                    width: 100%; 
+                }
+
+                /* 6. Subtle gray underline preview on hover */
+                .dashboard-tab:hover:not(.active)::after {
+                    width: 40%;
+                    background-color: #d1d5db;
+                }
+
+                /* Container transition (from before) */
+                .tab-content-container {
+                    animation: fadeInTab 0.4s ease-out;
+                }
+                
                 @keyframes fadeInTab {
-                    from { opacity: 0; transform: translateY(8px); }
+                    from { opacity: 0; transform: translateY(10px); }
                     to { opacity: 1; transform: translateY(0); }
                 }
                 `}
