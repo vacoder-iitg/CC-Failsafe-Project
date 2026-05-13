@@ -14,6 +14,7 @@ from ml_utils import (
     model_reg, model_clf, model_features, explainer,
     preprocess_features, get_risk_tier, FEATURE_LABELS
 )
+from cache_utils import clear_teacher_cache
 
 router = APIRouter()
 
@@ -226,6 +227,7 @@ async def upload_csv(file: UploadFile = File(...), db: Session = Depends(get_db)
             
         db.add_all(new_students)
         db.commit()
+        clear_teacher_cache(db, teacher_id)
         return {"message": f"Processed {len(new_students)} students for your vault."}
     except Exception as e:
         print(f"CSV Upload Error: {e}")

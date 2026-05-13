@@ -1,17 +1,20 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 const StudentVault = ({ students, loading }) => {
     const navigate = useNavigate();
     const [sortOrder, setSortOrder] = useState('highest');
 
-    const sortedStudents = [...students].sort((a, b) => {
-        if (sortOrder === 'highest') {
-            return b.risk_score - a.risk_score; 
-        } else {
-            return a.risk_score - b.risk_score; 
-        }
-    });
+    // Memoize the sorting logic to prevent unnecessary recalculations on re-renders
+    const sortedStudents = useMemo(() => {
+        return [...students].sort((a, b) => {
+            if (sortOrder === 'highest') {
+                return b.risk_score - a.risk_score;
+            } else {
+                return a.risk_score - b.risk_score;
+            }
+        });
+    }, [students, sortOrder]);
 
     const toggleSort = () => {
         setSortOrder(prev => prev === 'highest' ? 'lowest' : 'highest');
@@ -29,10 +32,10 @@ const StudentVault = ({ students, loading }) => {
             {/* Header Controls with Sort Button */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                 <h3 style={{ margin: 0 }}>Student Vault ({students.length})</h3>
-                
+
                 {students.length > 0 && (
                     <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                        <button 
+                        <button
                             onClick={toggleSort}
                             style={{
                                 padding: '8px 16px', backgroundColor: '#4b5563', color: 'white', border: 'none',
@@ -51,23 +54,23 @@ const StudentVault = ({ students, loading }) => {
                         <tr>
                             <th style={thStyle}>Name</th>
                             <th style={thStyle}>Risk Tier</th>
-                            <th style={{...thStyle, textAlign: 'center'}}>Current G1</th>
-                            <th style={{...thStyle, textAlign: 'center'}}>Current G2</th>
-                            <th style={{...thStyle, textAlign: 'center', backgroundColor: '#e0f2fe', color: '#0369a1'}}>Predicted G3</th>
-                            <th style={{...thStyle, textAlign: 'center'}}>Total Absences</th>
-                            <th style={{...thStyle, textAlign: 'center'}}>Action</th>
+                            <th style={{ ...thStyle, textAlign: 'center' }}>Current G1</th>
+                            <th style={{ ...thStyle, textAlign: 'center' }}>Current G2</th>
+                            <th style={{ ...thStyle, textAlign: 'center', backgroundColor: '#e0f2fe', color: '#0369a1' }}>Predicted G3</th>
+                            <th style={{ ...thStyle, textAlign: 'center' }}>Total Absences</th>
+                            <th style={{ ...thStyle, textAlign: 'center' }}>Action</th>
                         </tr>
                     </thead>
                     <tbody>
                         {sortedStudents.map(s => {
                             const isHighRisk = s.risk_category && s.risk_category.includes('HIGH');
                             const isModerate = s.risk_category && s.risk_category.includes('MODERATE');
-                            
+
                             let badgeStyle = {
                                 padding: '4px 10px', borderRadius: '9999px', fontSize: '12px', fontWeight: 'bold',
                                 backgroundColor: '#e5e7eb', color: '#374151', display: 'inline-flex', alignItems: 'center'
                             };
-                            
+
                             if (isHighRisk) {
                                 badgeStyle = { ...badgeStyle, backgroundColor: '#fee2e2', color: '#b91c1c' };
                             } else if (isModerate) {
@@ -78,7 +81,7 @@ const StudentVault = ({ students, loading }) => {
 
                             return (
                                 <tr key={s.id} style={{ transition: 'background-color 0.2s' }} onMouseEnter={e => e.currentTarget.style.backgroundColor = '#f9fafb'} onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
-                                    <td style={{...tdStyle, fontWeight: '500'}}>{s.student_name}</td>
+                                    <td style={{ ...tdStyle, fontWeight: '500' }}>{s.student_name}</td>
                                     <td style={tdStyle}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                             <span style={badgeStyle}>
@@ -92,13 +95,13 @@ const StudentVault = ({ students, loading }) => {
                                             )}
                                         </div>
                                     </td>
-                                    <td style={{...tdStyle, textAlign: 'center'}}>{s.G1}</td>
-                                    <td style={{...tdStyle, textAlign: 'center'}}>{s.G2}</td>
-                                    <td style={{...tdStyle, textAlign: 'center', color: '#2563eb', fontWeight: 'bold', backgroundColor: '#f0f9ff'}}>
+                                    <td style={{ ...tdStyle, textAlign: 'center' }}>{s.G1}</td>
+                                    <td style={{ ...tdStyle, textAlign: 'center' }}>{s.G2}</td>
+                                    <td style={{ ...tdStyle, textAlign: 'center', color: '#2563eb', fontWeight: 'bold', backgroundColor: '#f0f9ff' }}>
                                         {s.predicted_g3 || '-'}
                                     </td>
-                                    <td style={{...tdStyle, textAlign: 'center'}}>{s.absences}</td>
-                                    <td style={{...tdStyle, textAlign: 'center'}}>
+                                    <td style={{ ...tdStyle, textAlign: 'center' }}>{s.absences}</td>
+                                    <td style={{ ...tdStyle, textAlign: 'center' }}>
                                         <button onClick={() => navigate(`/student/${s.id}`)} style={{ padding: '6px 12px', backgroundColor: '#3b82f6', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', fontSize: '12px' }}>
                                             Insights →
                                         </button>

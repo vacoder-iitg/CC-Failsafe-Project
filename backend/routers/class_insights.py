@@ -21,10 +21,25 @@ from ml_utils import (
     preprocess_features, get_risk_tier, FEATURE_LABELS
 )
 
+from cache_utils import (
+    INSIGHTS_CACHE, DECISION_PLOT_CACHE, 
+    get_db_cache, set_db_cache
+)
+
 router = APIRouter()
 
 @router.get("/class/insights")
 def get_class_insights(db: Session = Depends(get_db), teacher_id: str = Depends(get_current_user_id)):
+    # 1. Check In-Memory Cache (Fastest)
+    if teacher_id in INSIGHTS_CACHE:
+        return INSIGHTS_CACHE[teacher_id]
+    
+    # 2. Check PostgreSQL Cache (Persistent)
+    db_cached = get_db_cache(db, teacher_id, "insights")
+    if db_cached:
+        INSIGHTS_CACHE[teacher_id] = db_cached
+        return db_cached
+
     students = db.query(models.Student).filter(models.Student.teacher_id == teacher_id).all()
     if not students:
         return {"avg_g1": 0, "avg_g2": 0, "avg_pred_g3": 0, "avg_absences": 0, "shap_graph_base64": None, "metric_plots": {}}
@@ -108,11 +123,14 @@ def get_class_insights(db: Session = Depends(get_db), teacher_id: str = Depends(
         except Exception as e:
             print(f"Error in class insights: {e}")
 
-    return {
+    result = {
         "avg_g1": avg_g1, "avg_g2": avg_g2, "avg_pred_g3": avg_pred_g3, "avg_absences": avg_absences,
         "engineered_metrics": engineered_metrics, "shap_graph_base64": shap_graph_base64,
         "decision_plot_base64": decision_plot_base64
     }
+    set_db_cache(db, teacher_id, "insights", result)
+    INSIGHTS_CACHE[teacher_id] = result
+    return result
 
 @router.get("/class/decision-plot")
 def get_filtered_decision_plot(
@@ -121,6 +139,18 @@ def get_filtered_decision_plot(
     db: Session = Depends(get_db),
     teacher_id: str = Depends(get_current_user_id)
 ):
+    cache_key = f"{teacher_id}_{mode}_{student_num}"
+    
+    # 1. Check In-Memory Cache
+    if cache_key in DECISION_PLOT_CACHE:
+        return DECISION_PLOT_CACHE[cache_key]
+        
+    # 2. Check PostgreSQL Cache
+    db_cached = get_db_cache(db, teacher_id, f"dp_{mode}_{student_num}")
+    if db_cached:
+        DECISION_PLOT_CACHE[cache_key] = db_cached
+        return db_cached
+
     if not model_clf or model_features is None or explainer is None:
         return {"plot": None, "title": "", "count": 0}
 
@@ -260,7 +290,11 @@ def get_filtered_decision_plot(
             buf.seek(0)
             plot_b64 = base64.b64encode(buf.read()).decode('utf-8')
             plt.close()
-        return {"plot": plot_b64, "title": title, "count": len(filtered)}
+        
+        result = {"plot": plot_b64, "title": title, "count": len(filtered)}
+        set_db_cache(db, teacher_id, f"dp_{mode}_{student_num}", result)
+        DECISION_PLOT_CACHE[cache_key] = result
+        return result
 
     except Exception as e:
         print(f"Filtered decision plot error ({mode}): {e}")
