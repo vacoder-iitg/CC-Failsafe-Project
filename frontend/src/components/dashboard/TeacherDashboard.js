@@ -3,6 +3,7 @@ import CsvUpload from '../CsvUpload';
 import ClassOverview from './tabs/ClassOverview';
 import StudentVault from './tabs/StudentVault';
 import GlobalRiskFactors from './tabs/GlobalRiskFactors';
+import DecisionTrend from './tabs/DecisionTrend';
 
 const FacultyDashboard = React.memo(({ students, loading, classInsights, loadingInsights, fetchStudents, user }) => {
     const [activeTab, setActiveTab] = useState(() => localStorage.getItem('failsafe_tab') || 'overview');
@@ -21,6 +22,7 @@ const FacultyDashboard = React.memo(({ students, loading, classInsights, loading
         { id: 'overview', label: <><span className="material-symbols-outlined" style={{ verticalAlign: 'bottom', marginRight: '6px' }}>school</span>Class Overview</> },
         { id: 'vault', label: <><span className="material-symbols-outlined" style={{ verticalAlign: 'bottom', marginRight: '6px' }}>groups</span>Student Vault</> },
         { id: 'global', label: <><span className="material-symbols-outlined" style={{ verticalAlign: 'bottom', marginRight: '6px', fontSize: '22px' }}>threat_intelligence</span>Global Risk Factors</> },
+        { id: 'decision', label: <><span className="material-symbols-outlined" style={{ verticalAlign: 'bottom', marginRight: '6px', fontSize: '22px' }}>account_tree</span>Decision Trend</> },
         { id: 'settings', label: <><span className="material-symbols-outlined" style={{ verticalAlign: 'bottom', marginRight: '6px' }}>settings</span>Data & Settings</> }
     ], []);
 
@@ -132,6 +134,17 @@ const FacultyDashboard = React.memo(({ students, loading, classInsights, loading
                 {/* TAB CONTENT: Global Risk Factors */}
                 <div style={{ display: activeTab === 'global' ? 'block' : 'none' }}>
                     <GlobalRiskFactors
+                        classInsights={classInsights}
+                        loadingInsights={loadingInsights}
+                        user={user}
+                        sharedCache={globalTabCache}
+                        setSharedCache={setGlobalTabCache}
+                    />
+                </div>
+
+                {/* TAB CONTENT: Decision Trend */}
+                <div style={{ display: activeTab === 'decision' ? 'block' : 'none' }}>
+                    <DecisionTrend
                         classInsights={classInsights}
                         loadingInsights={loadingInsights}
                         user={user}
