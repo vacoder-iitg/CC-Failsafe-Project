@@ -13,7 +13,7 @@ const AuthPage = () => {
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
-    const [role, setRole] = useState('Teacher');
+    const [role, setRole] = useState('Faculty');
 
     useEffect(() => {
         if (location.state?.mode === 'signup') {

@@ -2,7 +2,14 @@ import React, { useState } from 'react';
 
 const FacultyData = ({ facultyList, user }) => {
     const [expandedFaculty, setExpandedFaculty] = useState(null);
-    const [sentMessages, setSentMessages] = useState({}); // { 'facultyName_actionKey': true }
+
+    const [sentMessages, setSentMessages] = useState(() => {
+        const existing = JSON.parse(localStorage.getItem('failsafe_hod_messages') || '[]');
+        const mapping = {};
+        existing.forEach(m => { mapping[`${m.toTeacher || m.toFaculty}_${m.msgType}`] = true; });
+
+        return mapping;
+    });
 
     const sendHodMessage = (facultyName, msgType, msgLabel, msgDesc) => {
         const key = `${facultyName}_${msgType}`;

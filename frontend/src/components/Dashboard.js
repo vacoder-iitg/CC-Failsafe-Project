@@ -193,8 +193,8 @@ const Dashboard = () => {
             </div>
 
             {/* ─── Main Content Area ─── */}
-            <div style={{ 
-                flex: 1, 
+            <div style={{
+                flex: 1,
                 minWidth: 0,
                 backgroundImage: 'url("/auth-bg.png")',
                 backgroundSize: 'cover',

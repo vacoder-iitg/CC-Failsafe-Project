@@ -16,7 +16,7 @@ def create_user(user: UserAuth, db: Session = Depends(get_db)):
     existing_user = db.query(models.User).filter(models.User.username == user.username).first()
     if existing_user:
         raise HTTPException(status_code=400, detail="Username already exists. Please log in.")
-    role = user.role if user.role in ('Teacher', 'HoD') else 'Teacher'
+    role = user.role if user.role in ('Faculty', 'Teacher', 'HoD') else 'Faculty'
     new_user = models.User(username=user.username, password=user.password, role=role)
     db.add(new_user)
     db.commit()
@@ -31,12 +31,19 @@ def login_user(user: UserAuth, db: Session = Depends(get_db)):
     if db_user.password != user.password:
         raise HTTPException(status_code=401, detail="Incorrect password.")
     
-    # NEW: Verify role matches
-    if db_user.role != user.role:
-        role_display = "Head of Department" if db_user.role == "HoD" else "Teacher"
+    # NEW: Verify role matches (Allow Faculty/Teacher interchangeably)
+    user_role = user.role
+    db_role = db_user.role or "Faculty"
+    
+    is_teacher_role = user_role in ('Faculty', 'Teacher') and db_role in ('Faculty', 'Teacher')
+    is_hod_role = user_role == 'HoD' and db_role == 'HoD'
+    
+    if not (is_teacher_role or is_hod_role):
+        role_display = "Head of Department" if db_role == "HoD" else "Faculty"
         raise HTTPException(
             status_code=403, 
             detail=f"Access Denied. This account is registered as {role_display}. Please select the correct role above."
         )
 
-    return {"token": db_user.username, "role": db_user.role or "Teacher"}
+    return {"token": db_user.username, "role": db_role}
+
