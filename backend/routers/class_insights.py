@@ -10,7 +10,7 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import threading
-
+#This is final push
 # Global lock to prevent Matplotlib thread collisions (which cause blank/vanished graphs)
 plt_lock = threading.Lock()
 
@@ -161,6 +161,7 @@ def get_filtered_decision_plot(
         return {"plot": None, "title": "No students", "count": 0}
 
     # --- Filter / sort students by mode ---
+    filtered = []
     if mode == "student":
         if student_num is None:
             return {"plot": None, "title": "No student number provided", "count": 0}
@@ -170,24 +171,30 @@ def get_filtered_decision_plot(
             return {"plot": None, "title": f"Student {student_num} not found", "count": 0}
         title = f"SHAP Decision Plot — {target_name}"
     elif mode == "high":
-        sorted_s = sorted(all_students, key=lambda s: s.risk_score or 0, reverse=True)
-        filtered = [s for s in sorted_s if get_risk_tier(s.risk_score or 0) == 'HIGH'][:50]
-        title = f"SHAP Decision Plot — Top {len(filtered)} High Risk Students"
+        # Get students who are truly HIGH risk, up to 50
+        tier_matches = [s for s in all_students if get_risk_tier(s.risk_score or 0) == 'HIGH']
+        filtered = sorted(tier_matches, key=lambda s: s.risk_score or 0, reverse=True)[:50]
+        title = f"SHAP Decision Plot — {len(filtered)} High Risk Students"
     elif mode == "moderate":
-        sorted_s = sorted(all_students, key=lambda s: s.risk_score or 0, reverse=True)
-        filtered = [s for s in sorted_s if get_risk_tier(s.risk_score or 0) == 'MODERATE'][:50]
-        title = f"SHAP Decision Plot — Top {len(filtered)} Moderate Risk Students"
+        # Get students who are truly MODERATE risk, up to 50
+        tier_matches = [s for s in all_students if get_risk_tier(s.risk_score or 0) == 'MODERATE']
+        filtered = sorted(tier_matches, key=lambda s: s.risk_score or 0, reverse=True)[:50]
+        title = f"SHAP Decision Plot — {len(filtered)} Moderate Risk Students"
     elif mode == "low":
-        sorted_s = sorted(all_students, key=lambda s: s.risk_score or 0)
-        filtered = [s for s in sorted_s if get_risk_tier(s.risk_score or 0) == 'LOW'][:50]
-        title = f"SHAP Decision Plot — Top {len(filtered)} Low Risk Students"
+        # Get students who are truly LOW risk, up to 50
+        tier_matches = [s for s in all_students if get_risk_tier(s.risk_score or 0) == 'LOW']
+        filtered = sorted(tier_matches, key=lambda s: s.risk_score or 0)[:50]
+        title = f"SHAP Decision Plot — {len(filtered)} Low Risk Students"
     else:  # all
         sorted_s = sorted(all_students, key=lambda s: s.risk_score or 0, reverse=True)
         filtered = sorted_s[:50]
-        title = f"SHAP Decision Plot — All Students (Top {len(filtered)} by Risk)"
+        title = f"SHAP Decision Plot — Top {len(filtered)} Students by Risk"
 
     if not filtered:
-        return {"plot": None, "title": f"No students in '{mode}' category", "count": 0}
+        # Fallback for 'high' mode if empty: don't show moderate, just report empty
+        category_label = mode.capitalize()
+        return {"plot": None, "title": f"No students currently categorized as '{category_label}' risk.", "count": 0}
+
 
     try:
         student_list = [{c.name: getattr(s, c.name) for c in s.__table__.columns} for s in filtered]
@@ -219,7 +226,10 @@ def get_filtered_decision_plot(
         is_single = (mode == 'student' and len(filtered) == 1)
 
         with plt_lock:
-            plt.figure(figsize=(11, max(7, len(filtered) * 0.18 + 3)))
+            # Dynamic height based on student count (min 7, approx 0.2 per student)
+            plot_height = max(7, len(filtered) * 0.2 + 2)
+            fig, ax = plt.subplots(figsize=(11, plot_height))
+            
             shap.decision_plot(
                 expected_value,
                 shap_matrix,
@@ -228,13 +238,11 @@ def get_filtered_decision_plot(
                 highlight=None,
                 plot_color='RdBu',
                 auto_size_plot=False,
-                color_bar=not is_single,  # hide colorbar for single student; we show our own badge
+               
             )
-
-            # ── Post-process: recolour every SHAP polyline by risk tier ──────────
+                   # ── Post-process: recolour every SHAP polyline by risk tier ──────────
             # shap.decision_plot uses RdBu; near-zero values render almost white.
             # We grab all drawn Line2D objects and recolour them ourselves.
-            ax = plt.gca()
             data_lines = [l for l in ax.get_lines() if len(l.get_xdata()) > 3]
             for idx, line in enumerate(data_lines):
                 if idx < len(line_colors):
@@ -260,16 +268,16 @@ def get_filtered_decision_plot(
                     fontsize=9.5, verticalalignment='bottom', horizontalalignment='right',
                     multialignment='left',
                     bbox=dict(boxstyle='round,pad=0.6', facecolor=tier_color,
-                              alpha=0.13, edgecolor=tier_color, linewidth=1.8),
+                               alpha=0.13, edgecolor=tier_color, linewidth=1.8),
                     color='#1f2937',
                 )
                 from matplotlib.lines import Line2D
                 ax.legend(
                     handles=[
                         Line2D([0], [0], color=tier_color, linewidth=3,
-                               label=f"Student path — {risk_tier} risk"),
+                                label=f"Student path — {risk_tier} risk"),
                         Line2D([0], [0], color='gray', linewidth=1, linestyle='--',
-                               label='Base rate (model average)'),
+                                label='Base rate (model average)'),
                     ],
                     loc='upper left', fontsize=9, framealpha=0.88, edgecolor='#d1d5db'
                 )
@@ -284,14 +292,14 @@ def get_filtered_decision_plot(
                     loc='upper left', fontsize=9, framealpha=0.88, edgecolor='#d1d5db'
                 )
 
-            plt.title(title, fontsize=12, fontweight='bold', color='#1f2937', pad=12)
-            plt.tight_layout()
+            ax.set_title(title, fontsize=12, fontweight='bold', color='#1f2937', pad=12)
+            fig.tight_layout()
 
             buf = io.BytesIO()
-            plt.savefig(buf, format='png', bbox_inches='tight', dpi=110)
+            fig.savefig(buf, format='png', bbox_inches='tight', dpi=110)
             buf.seek(0)
             plot_b64 = base64.b64encode(buf.read()).decode('utf-8')
-            plt.close()
+            plt.close(fig)
         
         result = {"plot": plot_b64, "title": title, "count": len(filtered)}
         set_db_cache(db, teacher_id, f"dp_{mode}_{student_num}", result)
