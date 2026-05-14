@@ -12,7 +12,8 @@ const Overview = ({ agg, facultyList }) => {
     );
 
     return (
-        <div style={{ padding: '28px 32px', backgroundColor: '#f8f9ff', minHeight: '100vh' }}>
+        <div style={{ padding: '28px 32px', backgroundColor: 'transparent', minHeight: '100vh' }}>
+
             <h2 style={{ margin: '0 0 6px', fontSize: '24px', color: '#111827' }}>Department Overview</h2>
             <p style={{ color: '#6b7280', fontSize: '14px', marginBottom: '24px' }}>Aggregated metrics across all faculty members.</p>
 

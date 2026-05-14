@@ -193,7 +193,16 @@ const Dashboard = () => {
             </div>
 
             {/* ─── Main Content Area ─── */}
-            <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ 
+                flex: 1, 
+                minWidth: 0,
+                backgroundImage: 'url("/auth-bg.png")',
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+                backgroundAttachment: 'fixed',
+                minHeight: '100vh'
+            }}>
+
                 {activePage === 'takeaction' && (
                     <TakeAction
                         students={students}

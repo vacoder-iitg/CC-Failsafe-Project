@@ -127,7 +127,16 @@ const StudentProfile = () => {
     const riskTierText = riskTier.replace(/🔴 |🟡 |🟢 /g, '');
 
     return (
-        <div style={{ padding: '30px', fontFamily: 'sans-serif', backgroundColor: '#f9fafb', minHeight: '100vh' }}>
+        <div style={{ 
+            padding: '30px', 
+            fontFamily: 'sans-serif', 
+            backgroundImage: 'url("/auth-bg.png")',
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            backgroundAttachment: 'fixed',
+            minHeight: '100vh' 
+        }}>
+
             <button onClick={() => navigate('/dashboard')} style={{ padding: '8px 16px', backgroundColor: '#e5e7eb', color: '#374151', border: 'none', borderRadius: '4px', cursor: 'pointer', marginBottom: '20px', fontWeight: 'bold' }}>← Back to Dashboard</button>
             
             {/* Header Section */}

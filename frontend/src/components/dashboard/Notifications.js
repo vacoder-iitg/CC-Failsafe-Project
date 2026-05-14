@@ -2,7 +2,8 @@ import React from 'react';
 
 const Notifications = ({ notifications, unreadCount, markAllRead, user }) => {
     return (
-        <div style={{ padding: '28px 32px', backgroundColor: '#f8f9ff', minHeight: '100vh' }}>
+        <div style={{ padding: '28px 32px', backgroundColor: 'transparent', minHeight: '100vh' }}>
+
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                     <span className="material-symbols-outlined" style={{ fontSize: '28px', color: '#6366f1' }}>notifications</span>

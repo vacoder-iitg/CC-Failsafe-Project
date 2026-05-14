@@ -92,16 +92,25 @@ const HodDashboard = () => {
             </div>
 
             {/* Main Content */}
-            <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ 
+                flex: 1, 
+                minWidth: 0,
+                backgroundImage: 'url("/auth-bg.png")',
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+                backgroundAttachment: 'fixed',
+                minHeight: '100vh'
+            }}>
+
                 {loading ? (
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', color: '#6b7280' }}>Loading department data...</div>
                 ) : (
                     <>
                         {/* === OVERVIEW PAGE === */}
-                        {activePage === 'overview' && <Overview agg={agg} teachers={teachers} />}
+                        {activePage === 'overview' && <Overview agg={agg} facultyList={teachers} />}
 
                         {/* === TEACHER DATA PAGE === */}
-                        {activePage === 'teacher' && <TeacherData teachers={teachers} user={user} />}
+                        {activePage === 'teacher' && <TeacherData facultyList={teachers} user={user} />}
 
                         {/* === ACTIONS LOG PAGE === */}
                         {activePage === 'actions' && <ActionsLog allNotifs={allNotifs} />}

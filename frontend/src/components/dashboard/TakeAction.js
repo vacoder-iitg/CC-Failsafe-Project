@@ -197,7 +197,8 @@ const TakeAction = React.memo(({ students, loading, completedActions, markAction
     }, [students]);
 
     return (
-        <div style={{ padding: '28px 32px', backgroundColor: '#f8f9ff', minHeight: '100vh' }}>
+        <div style={{ padding: '28px 32px', backgroundColor: 'transparent', minHeight: '100vh' }}>
+
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
                 <span className="material-symbols-outlined" style={{ fontSize: '28px', color: '#6366f1' }}>bolt</span>
                 <h2 style={{ margin: 0, fontSize: '24px', color: '#111827' }}>Take Action</h2>

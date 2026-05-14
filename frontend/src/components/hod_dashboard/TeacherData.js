@@ -24,7 +24,8 @@ const FacultyData = ({ facultyList, user }) => {
     };
 
     return (
-        <div style={{ padding: '28px 32px', backgroundColor: '#f8f9ff', minHeight: '100vh' }}>
+        <div style={{ padding: '28px 32px', backgroundColor: 'transparent', minHeight: '100vh' }}>
+
             <h2 style={{ margin: '0 0 6px', fontSize: '24px', color: '#111827' }}>Faculty Details</h2>
             <p style={{ color: '#6b7280', fontSize: '14px', marginBottom: '24px' }}>Click on a faculty member to expand their class metrics.</p>
 
