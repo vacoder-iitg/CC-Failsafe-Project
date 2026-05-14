@@ -181,11 +181,11 @@ const TakeAction = React.memo(({ students, loading, completedActions, markAction
             if ((s.Dalc && s.Dalc >= 3) || (s.Walc && s.Walc >= 3)) actions.push({ icon: 'no_drinks', color: '#dc2626', bg: '#fef2f2', label: 'High Alcohol Consumption', desc: 'Refer to school counselor for substance awareness', priority: 'high' });
             if (s.goout !== undefined && s.goout >= 4) actions.push({ icon: 'groups', color: '#f59e0b', bg: '#fffbeb', label: 'High Social Activity', desc: 'Monitor social time, suggest balanced routine', priority: 'low' });
             if (s.freetime !== undefined && s.freetime >= 4) actions.push({ icon: 'sports_esports', color: '#6b7280', bg: '#f9fafb', label: 'Excessive Free Time', desc: 'Encourage extracurricular/academic engagement', priority: 'low' });
-            if (s.famsup === 'no') actions.push({ icon: 'family_restroom', color: '#8b5cf6', bg: '#f5f3ff', label: 'No Family Support', desc: 'Schedule parent-teacher meeting to engage family', priority: 'medium' });
+            if (s.famsup === 'no') actions.push({ icon: 'family_restroom', color: '#8b5cf6', bg: '#f5f3ff', label: 'No Family Support', desc: 'Schedule parent-faculty meeting to engage family', priority: 'medium' });
             if (s.schoolsup === 'no' && (s.G1 < 10 || s.G2 < 10)) actions.push({ icon: 'support_agent', color: '#3b82f6', bg: '#eff6ff', label: 'No School Support', desc: 'Enroll in school academic support program', priority: 'medium' });
             if (s.higher === 'no') actions.push({ icon: 'trending_up', color: '#6366f1', bg: '#eef2ff', label: 'No Higher Ed. Aspiration', desc: 'Provide career guidance & motivational counseling', priority: 'medium' });
             if (s.romantic === 'yes' && s.studytime <= 2) actions.push({ icon: 'favorite', color: '#ec4899', bg: '#fdf2f8', label: 'Relationship + Low Study', desc: 'Time management workshop', priority: 'low' });
-            if ((s.Medu !== undefined && s.Medu <= 1) && (s.Fedu !== undefined && s.Fedu <= 1)) actions.push({ icon: 'escalator_warning', color: '#6b7280', bg: '#f9fafb', label: 'Low Parental Education', desc: 'Additional mentorship from senior students/teachers', priority: 'low' });
+            if ((s.Medu !== undefined && s.Medu <= 1) && (s.Fedu !== undefined && s.Fedu <= 1)) actions.push({ icon: 'escalator_warning', color: '#6b7280', bg: '#f9fafb', label: 'Low Parental Education', desc: 'Additional mentorship from senior students/faculty', priority: 'low' });
 
             if (actions.length === 0) actions.push({ icon: 'check_circle', color: '#10b981', bg: '#ecfdf5', label: 'No Major Concerns', desc: 'Student appears on track — continue monitoring', priority: 'ok' });
             return actions;

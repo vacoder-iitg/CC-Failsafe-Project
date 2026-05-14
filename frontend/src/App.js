@@ -3,7 +3,8 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 
 // Notice the updated paths below! We are telling App.js to look inside the folders.
 import { AuthProvider, AuthContext } from './context/AuthContext';
-import AuthPage from './components/AuthPage'; 
+import LandingPage from './components/LandingPage';
+import AuthPage from './components/AuthPage';
 import Dashboard from './components/Dashboard';
 import HodDashboard from './components/HodDashboard';
 import StudentProfile from './components/StudentProfile';
@@ -11,24 +12,16 @@ import StudentProfile from './components/StudentProfile';
 // The Bouncer Component: Kicks unauthenticated users back to login
 const ProtectedRoute = ({ children }) => {
     const { user } = useContext(AuthContext);
-    
+
     if (!user) {
-        return <Navigate to="/" replace />;
+        return <Navigate to="/auth" replace />; // Updated to /auth
     }
-    
+
     return children;
 };
 
-// The Reverse Bouncer: Keeps logged-in users out of the login page
+// The Reverse Bouncer: Shows the AuthPage (login/signup)
 const AuthWrapper = () => {
-    const { user } = useContext(AuthContext);
-    if (user) {
-        // Route based on role
-        if (user.role === 'HoD') {
-            return <Navigate to="/hod" replace />;
-        }
-        return <Navigate to="/dashboard" replace />;
-    }
     return <AuthPage />;
 };
 
@@ -37,34 +30,37 @@ const App = () => {
         <AuthProvider>
             <Router>
                 <Routes>
+                    {/* The Public Landing Page */}
+                    <Route path="/" element={<LandingPage />} />
+
                     {/* The public login route */}
-                    <Route path="/" element={<AuthWrapper />} />
+                    <Route path="/auth" element={<AuthWrapper />} />
 
                     {/* Faculty dashboard */}
-                    <Route 
-                        path="/dashboard" 
+                    <Route
+                        path="/dashboard"
                         element={
                             <ProtectedRoute>
                                 <Dashboard />
                             </ProtectedRoute>
-                        } 
+                        }
                     />
                     {/* HoD dashboard */}
-                    <Route 
-                        path="/hod" 
+                    <Route
+                        path="/hod"
                         element={
                             <ProtectedRoute>
                                 <HodDashboard />
                             </ProtectedRoute>
-                        } 
+                        }
                     />
-                    <Route 
-                        path="/student/:id" 
+                    <Route
+                        path="/student/:id"
                         element={
                             <ProtectedRoute>
                                 <StudentProfile />
                             </ProtectedRoute>
-                        } 
+                        }
                     />
                 </Routes>
             </Router>

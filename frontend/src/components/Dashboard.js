@@ -12,7 +12,7 @@ const Dashboard = () => {
     const [loading, setLoading] = useState(true);
     const [classInsights, setClassInsights] = useState(null);
     const [loadingInsights, setLoadingInsights] = useState(true);
-    
+
     // UI States
     const [activePage, setActivePage] = useState(() => localStorage.getItem('failsafe_page') || 'dashboard');
 
@@ -22,14 +22,14 @@ const Dashboard = () => {
         try {
             const saved = localStorage.getItem('failsafe_notifications');
             if (saved) return JSON.parse(saved).map(n => ({ ...n, timestamp: new Date(n.timestamp) }));
-        } catch (e) {}
+        } catch (e) { }
         return [];
     });
     const [completedActions, setCompletedActions] = useState(() => {
         try {
             const saved = localStorage.getItem('failsafe_completed');
             if (saved) return new Set(JSON.parse(saved));
-        } catch (e) {}
+        } catch (e) { }
         return new Set();
     });
 
@@ -101,8 +101,8 @@ const Dashboard = () => {
             });
     };
 
-    useEffect(() => { 
-        if (user) fetchStudents(); 
+    useEffect(() => {
+        if (user) fetchStudents();
     }, [user]);
 
     return (
@@ -132,8 +132,8 @@ const Dashboard = () => {
                 {/* Nav Items */}
                 <nav style={{ flex: 1, padding: '16px 10px' }}>
                     {[
-                        { key: 'dashboard',   icon: 'dashboard',   label: 'Dashboard' },
-                        { key: 'takeaction',  icon: 'bolt',        label: 'Take Action' },
+                        { key: 'dashboard', icon: 'dashboard', label: 'Dashboard' },
+                        { key: 'takeaction', icon: 'bolt', label: 'Take Action' },
                         { key: 'notifications', icon: 'notifications', label: 'Notifications', badge: unreadCount > 0 ? unreadCount : null },
                     ].map(item => (
                         <button
@@ -195,29 +195,29 @@ const Dashboard = () => {
             {/* ─── Main Content Area ─── */}
             <div style={{ flex: 1, minWidth: 0 }}>
                 {activePage === 'takeaction' && (
-                    <TakeAction 
-                        students={students} 
-                        loading={loading} 
-                        completedActions={completedActions} 
-                        markActionDone={markActionDone} 
+                    <TakeAction
+                        students={students}
+                        loading={loading}
+                        completedActions={completedActions}
+                        markActionDone={markActionDone}
                     />
                 )}
                 {activePage === 'notifications' && (
-                    <Notifications 
-                        notifications={notifications} 
-                        unreadCount={unreadCount} 
-                        markAllRead={markAllRead} 
-                        user={user} 
+                    <Notifications
+                        notifications={notifications}
+                        unreadCount={unreadCount}
+                        markAllRead={markAllRead}
+                        user={user}
                     />
                 )}
                 {activePage === 'dashboard' && (
-                    <TeacherDashboard 
-                        students={students} 
-                        loading={loading} 
-                        classInsights={classInsights} 
-                        loadingInsights={loadingInsights} 
-                        fetchStudents={fetchStudents} 
-                        user={user} 
+                    <TeacherDashboard
+                        students={students}
+                        loading={loading}
+                        classInsights={classInsights}
+                        loadingInsights={loadingInsights}
+                        fetchStudents={fetchStudents}
+                        user={user}
                     />
                 )}
             </div>

@@ -17,15 +17,15 @@ def hod_overview(db: Session = Depends(get_db), requester: str = Depends(get_cur
     """HoD endpoint: returns per-teacher summary + aggregate metrics."""
     # Verify requester is HoD
     req_user = db.query(models.User).filter(models.User.username == requester).first()
-    if not req_user or (req_user.role or 'Faculty') != 'HoD':
+    if not req_user or (req_user.role or 'Teacher') != 'HoD':
         raise HTTPException(status_code=403, detail="Access denied. HoD role required.")
 
-    # Get all faculty users
-    faculty_users = db.query(models.User).filter(models.User.role != 'HoD').all()
-    teachers_data = []
+    # Get all teacher users
+    teacher_users = db.query(models.User).filter(models.User.role != 'HoD').all()
+    teacher_data = []
 
-    for faculty in faculty_users:
-        students = db.query(models.Student).filter(models.Student.teacher_id == faculty.username).all()
+    for teacher in teacher_users:
+        students = db.query(models.Student).filter(models.Student.teacher_id == teacher.username).all()
         if not students:
             continue
 
@@ -60,8 +60,8 @@ def hod_overview(db: Session = Depends(get_db), requester: str = Depends(get_cur
         pred_g3_vals = [s['predicted_g3'] for s in student_list if isinstance(s.get('predicted_g3'), (int, float))]
         avg_pred_g3 = round(sum(pred_g3_vals) / len(pred_g3_vals), 1) if pred_g3_vals else 0
 
-        teachers_data.append({
-            'teacher_name': faculty.username,
+        teacher_data.append({
+            'teacher_name': teacher.username,
             'total_students': total,
             'high_risk': high_risk,
             'moderate_risk': moderate_risk,
@@ -74,14 +74,15 @@ def hod_overview(db: Session = Depends(get_db), requester: str = Depends(get_cur
         })
 
     # Aggregate across all teachers
-    all_total = sum(t['total_students'] for t in teachers_data)
+    all_total = sum(t['total_students'] for t in teacher_data)
     aggregate = {
-        'total_teachers': len(teachers_data),
+        'total_teachers': len(teacher_data),
         'total_students': all_total,
-        'total_high_risk': sum(t['high_risk'] for t in teachers_data),
-        'total_moderate_risk': sum(t['moderate_risk'] for t in teachers_data),
-        'total_low_risk': sum(t['low_risk'] for t in teachers_data),
-        'avg_risk_pct': round(sum(t['avg_risk_pct'] * t['total_students'] for t in teachers_data) / all_total, 1) if all_total else 0,
+        'total_high_risk': sum(t['high_risk'] for t in teacher_data),
+        'total_moderate_risk': sum(t['moderate_risk'] for t in teacher_data),
+        'total_low_risk': sum(t['low_risk'] for t in teacher_data),
+        'avg_risk_pct': round(sum(t['avg_risk_pct'] * t['total_students'] for t in teacher_data) / all_total, 1) if all_total else 0,
     }
 
-    return { 'teachers': teachers_data, 'aggregate': aggregate }
+    return { 'teachers': teacher_data, 'aggregate': aggregate }
+

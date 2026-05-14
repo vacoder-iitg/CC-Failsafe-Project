@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import Overview from './hod_dashboard/Overview';
-import FacultyData from './hod_dashboard/FacultyData';
+import TeacherData from './hod_dashboard/TeacherData';
 import ActionsLog from './hod_dashboard/ActionsLog';
 
 const HodDashboard = () => {
@@ -12,7 +12,7 @@ const HodDashboard = () => {
 
     useEffect(() => { localStorage.setItem('hod_page', activePage); }, [activePage]);
 
-    // Read all faculty notifications from localStorage
+    // Read all teacher notifications from localStorage
     const getAllNotifications = () => {
         try {
             const saved = localStorage.getItem('failsafe_notifications');
@@ -25,9 +25,9 @@ const HodDashboard = () => {
         fetch('http://localhost:8000/hod/overview', {
             headers: { 'Authorization': `Bearer ${user.token}` }
         })
-        .then(r => r.json())
-        .then(d => { setData(d); setLoading(false); })
-        .catch(() => setLoading(false));
+            .then(r => r.json())
+            .then(d => { setData(d); setLoading(false); })
+            .catch(() => setLoading(false));
     }, [user]);
 
     const agg = data?.aggregate || {};
@@ -52,7 +52,7 @@ const HodDashboard = () => {
                 <nav style={{ flex: 1, padding: '16px 10px' }}>
                     {[
                         { key: 'overview', icon: 'monitoring', label: 'Overview' },
-                        { key: 'faculty', icon: 'groups', label: 'Faculty Data' },
+                        { key: 'teacher', icon: 'groups', label: 'Teacher Data' },
                         { key: 'actions', icon: 'task_alt', label: 'Actions Log' },
                     ].map(item => (
                         <button key={item.key} onClick={() => setActivePage(item.key)} style={{
@@ -96,16 +96,16 @@ const HodDashboard = () => {
                 {loading ? (
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', color: '#6b7280' }}>Loading department data...</div>
                 ) : (
-                <>
-                    {/* === OVERVIEW PAGE === */}
-                    {activePage === 'overview' && <Overview agg={agg} teachers={teachers} />}
+                    <>
+                        {/* === OVERVIEW PAGE === */}
+                        {activePage === 'overview' && <Overview agg={agg} teachers={teachers} />}
 
-                    {/* === FACULTY DATA PAGE === */}
-                    {activePage === 'faculty' && <FacultyData teachers={teachers} user={user} />}
+                        {/* === TEACHER DATA PAGE === */}
+                        {activePage === 'teacher' && <TeacherData teachers={teachers} user={user} />}
 
-                    {/* === ACTIONS LOG PAGE === */}
-                    {activePage === 'actions' && <ActionsLog allNotifs={allNotifs} />}
-                </>
+                        {/* === ACTIONS LOG PAGE === */}
+                        {activePage === 'actions' && <ActionsLog allNotifs={allNotifs} />}
+                    </>
                 )}
             </div>
         </div>

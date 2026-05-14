@@ -22,7 +22,90 @@ const StudentProfile = () => {
         .catch(err => { console.error("Fetch error:", err); setLoading(false); });
     }, [id, user]);
 
-    if (loading) return <div style={{ padding: '50px', textAlign: 'center' }}><h2>Running Deep AI Analysis...</h2></div>;
+    if (loading) {
+        return (
+            <div style={{ 
+                display: 'flex', 
+                flexDirection: 'column', 
+                alignItems: 'center', 
+                justifyContent: 'center', 
+                height: '100vh', 
+                fontFamily: "'Inter', sans-serif",
+                background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
+                textAlign: 'center',
+                padding: '20px'
+            }}>
+                <div style={{
+                    backgroundColor: 'white',
+                    padding: '40px',
+                    borderRadius: '24px',
+                    boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    maxWidth: '400px',
+                    width: '100%',
+                    border: '1px solid rgba(255, 255, 255, 0.8)'
+                }}>
+                    <img 
+                        src="https://cdn.dribbble.com/users/980520/screenshots/2859415/monitoring.gif" 
+                        alt="AI Analysis" 
+                        style={{ 
+                            width: '240px', 
+                            height: 'auto', 
+                            marginBottom: '24px', 
+                            borderRadius: '16px',
+                            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                        }}
+                    />
+                    <h2 style={{ 
+                        margin: '0 0 12px 0', 
+                        color: '#1e293b', 
+                        fontSize: '24px', 
+                        fontWeight: '800',
+                        letterSpacing: '-0.02em'
+                    }}>
+                        Running Deep AI Analysis...
+                    </h2>
+                    <p style={{ 
+                        margin: 0, 
+                        color: '#64748b', 
+                        fontSize: '15px',
+                        lineHeight: '1.5',
+                        fontWeight: '500'
+                    }}>
+                        Please wait while FAILSAFE crunches student metrics and generates real-time risk assessments.
+                    </p>
+                    
+                    <div style={{ 
+                        marginTop: '24px',
+                        width: '100%',
+                        height: '4px',
+                        backgroundColor: '#f1f5f9',
+                        borderRadius: '2px',
+                        overflow: 'hidden'
+                    }}>
+                        <div style={{
+                            width: '40%',
+                            height: '100%',
+                            backgroundColor: '#6366f1',
+                            borderRadius: '2px',
+                            animation: 'loadingBar 1.5s infinite ease-in-out'
+                        }} />
+                    </div>
+                    <style>
+                        {`
+                        @keyframes loadingBar {
+                            0% { transform: translateX(-100%); }
+                            100% { transform: translateX(250%); }
+                        }
+                        `}
+                    </style>
+                </div>
+            </div>
+        );
+    }
+
 
     if (!profileData || !profileData.student_info) {
         return (

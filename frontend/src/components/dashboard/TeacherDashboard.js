@@ -4,8 +4,9 @@ import ClassOverview from './tabs/ClassOverview';
 import StudentVault from './tabs/StudentVault';
 import GlobalRiskFactors from './tabs/GlobalRiskFactors';
 
-const TeacherDashboard = React.memo(({ students, loading, classInsights, loadingInsights, fetchStudents, user }) => {
+const FacultyDashboard = React.memo(({ students, loading, classInsights, loadingInsights, fetchStudents, user }) => {
     const [activeTab, setActiveTab] = useState(() => localStorage.getItem('failsafe_tab') || 'overview');
+
     // Cache for GlobalRiskFactors so it doesn't recalculate ML models when switching tabs
     const [globalTabCache, setGlobalTabCache] = useState({});
 
@@ -95,7 +96,7 @@ const TeacherDashboard = React.memo(({ students, loading, classInsights, loading
                 `}
             </style>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                <h2 style={{ margin: 0, color: '#111827' }}>Teacher Dashboard</h2>
+                <h2 style={{ margin: 0, color: '#111827' }}>Faculty Dashboard</h2>
             </div>
 
             {/* Navigation Bar */}
@@ -151,4 +152,4 @@ const TeacherDashboard = React.memo(({ students, loading, classInsights, loading
     );
 });
 
-export default TeacherDashboard;
+export default FacultyDashboard;

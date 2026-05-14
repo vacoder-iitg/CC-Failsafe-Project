@@ -1,14 +1,27 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 
 const AuthPage = () => {
+    const navigate = useNavigate();
+    const location = useLocation();
     const { login, signup } = useContext(AuthContext);
-    const [isLoginMode, setIsLoginMode] = useState(true);
+
+    const [isLoginMode, setIsLoginMode] = useState(location.state?.mode !== 'signup');
+
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
-    const [role, setRole] = useState('Faculty');
+    const [role, setRole] = useState('Teacher');
+
+    useEffect(() => {
+        if (location.state?.mode === 'signup') {
+            setIsLoginMode(false);
+        } else if (location.state?.mode === 'login') {
+            setIsLoginMode(true);
+        }
+    }, [location.state]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -21,8 +34,13 @@ const AuthPage = () => {
             } else {
                 await signup(username, password, role);
             }
+            if (role === 'HoD') {
+                navigate('/hod');
+            } else {
+                navigate('/dashboard');
+            }
         } catch (err) {
-            setError(err.message); 
+            setError(err.message);
         } finally {
             setLoading(false);
         }
@@ -30,17 +48,17 @@ const AuthPage = () => {
 
     const isHod = role === 'HoD';
     const primaryColor = isHod ? '#f59e0b' : '#6366f1';
-    const gradient = isHod 
-        ? 'linear-gradient(135deg, #f59e0b 0%, #ef4444 100%)' 
+    const gradient = isHod
+        ? 'linear-gradient(135deg, #f59e0b 0%, #ef4444 100%)'
         : 'linear-gradient(135deg, #818cf8 0%, #c084fc 100%)';
     const logoIcon = isHod ? 'shield_person' : 'school';
 
     return (
-        <div style={{ 
-            display: 'flex', 
-            justifyContent: 'center', 
-            alignItems: 'center', 
-            minHeight: '100vh', 
+        <div style={{
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            minHeight: '100vh',
             backgroundColor: '#f8fafc',
             backgroundImage: 'url("auth-bg.png")',
             backgroundSize: 'cover',
@@ -49,28 +67,56 @@ const AuthPage = () => {
             fontFamily: "'Inter', 'Segoe UI', sans-serif",
             padding: '20px'
         }}>
-            {/* Glassmorphism Card */}
-            <div style={{ 
-                backgroundColor: 'rgba(255, 255, 255, 0.75)', 
+
+            <div style={{
+                backgroundColor: 'rgba(255, 255, 255, 0.75)',
                 backdropFilter: 'blur(12px)',
                 WebkitBackdropFilter: 'blur(12px)',
-                padding: '48px 40px', 
-                borderRadius: '32px', 
-                boxShadow: '0 25px 50px -12px rgba(0,0,0,0.15)', 
-                width: '100%', 
+                padding: '48px 40px',
+                borderRadius: '32px',
+                boxShadow: '0 25px 50px -12px rgba(0,0,0,0.15)',
+                width: '100%',
                 maxWidth: '420px',
                 border: '1px solid rgba(255, 255, 255, 0.4)',
-                textAlign: 'center'
+                textAlign: 'center',
+                position: 'relative'
             }}>
-                {/* Dynamic Logo Section */}
+
+                <button
+                    onClick={() => navigate('/')}
+                    style={{
+                        position: 'absolute',
+                        top: '24px',
+                        left: '24px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        background: 'none',
+                        border: 'none',
+                        color: '#64748b',
+                        fontWeight: '700',
+                        fontSize: '13px',
+                        cursor: 'pointer',
+                        padding: '8px',
+                        borderRadius: '8px',
+                        transition: 'all 0.2s'
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.05)'; e.currentTarget.style.color = '#1e293b'; }}
+                    onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = '#64748b'; }}
+                >
+                    <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>arrow_back</span>
+                    Back
+                </button>
+
+
                 <div style={{ marginBottom: '32px' }}>
-                    <div style={{ 
-                        width: '64px', 
-                        height: '64px', 
-                        borderRadius: '20px', 
-                        background: gradient, 
-                        display: 'flex', 
-                        alignItems: 'center', 
+                    <div style={{
+                        width: '64px',
+                        height: '64px',
+                        borderRadius: '20px',
+                        background: gradient,
+                        display: 'flex',
+                        alignItems: 'center',
                         justifyContent: 'center',
                         margin: '0 auto 16px',
                         boxShadow: `0 10px 25px ${isHod ? 'rgba(245,158,11,0.3)' : 'rgba(99,102,241,0.3)'}`
@@ -87,13 +133,12 @@ const AuthPage = () => {
                     </p>
                 </div>
 
-                {/* Role Selector */}
-                <div style={{ 
-                    display: 'flex', 
-                    background: 'rgba(0, 0, 0, 0.05)', 
-                    padding: '4px', 
-                    borderRadius: '14px', 
-                    marginBottom: '32px' 
+                <div style={{
+                    display: 'flex',
+                    background: 'rgba(0, 0, 0, 0.05)',
+                    padding: '4px',
+                    borderRadius: '14px',
+                    marginBottom: '32px'
                 }}>
                     {['Faculty', 'HoD'].map(r => (
                         <button
@@ -120,15 +165,15 @@ const AuthPage = () => {
                 </div>
 
                 {error && (
-                    <div style={{ 
-                        backgroundColor: 'rgba(225, 29, 72, 0.1)', 
-                        color: '#e11d48', 
-                        padding: '14px', 
-                        borderRadius: '14px', 
-                        marginBottom: '24px', 
-                        fontSize: '13px', 
-                        fontWeight: '600', 
-                        border: '1px solid rgba(225, 29, 72, 0.2)' 
+                    <div style={{
+                        backgroundColor: 'rgba(225, 29, 72, 0.1)',
+                        color: '#e11d48',
+                        padding: '14px',
+                        borderRadius: '14px',
+                        marginBottom: '24px',
+                        fontSize: '13px',
+                        fontWeight: '600',
+                        border: '1px solid rgba(225, 29, 72, 0.2)'
                     }}>
                         {error}
                     </div>
@@ -139,16 +184,16 @@ const AuthPage = () => {
                         <label style={{ display: 'block', marginBottom: '8px', color: '#334155', fontSize: '13px', fontWeight: '700', marginLeft: '4px' }}>Username</label>
                         <div style={{ position: 'relative' }}>
                             <span className="material-symbols-outlined" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: '#64748b', fontSize: '20px' }}>person</span>
-                            <input 
-                                type="text" 
+                            <input
+                                type="text"
                                 required
-                                value={username} 
-                                onChange={(e) => setUsername(e.target.value)} 
+                                value={username}
+                                onChange={(e) => setUsername(e.target.value)}
                                 placeholder="Enter your username"
-                                style={{ 
-                                    width: '100%', 
-                                    padding: '14px 14px 14px 44px', 
-                                    borderRadius: '14px', 
+                                style={{
+                                    width: '100%',
+                                    padding: '14px 14px 14px 44px',
+                                    borderRadius: '14px',
                                     border: '1px solid rgba(0,0,0,0.1)',
                                     backgroundColor: 'rgba(255,255,255,0.5)',
                                     fontSize: '15px',
@@ -166,16 +211,16 @@ const AuthPage = () => {
                         <label style={{ display: 'block', marginBottom: '8px', color: '#334155', fontSize: '13px', fontWeight: '700', marginLeft: '4px' }}>Password</label>
                         <div style={{ position: 'relative' }}>
                             <span className="material-symbols-outlined" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: '#64748b', fontSize: '20px' }}>lock</span>
-                            <input 
-                                type="password" 
+                            <input
+                                type="password"
                                 required
-                                value={password} 
-                                onChange={(e) => setPassword(e.target.value)} 
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
                                 placeholder="••••••••"
-                                style={{ 
-                                    width: '100%', 
-                                    padding: '14px 14px 14px 44px', 
-                                    borderRadius: '14px', 
+                                style={{
+                                    width: '100%',
+                                    padding: '14px 14px 14px 44px',
+                                    borderRadius: '14px',
                                     border: '1px solid rgba(0,0,0,0.1)',
                                     backgroundColor: 'rgba(255,255,255,0.5)',
                                     fontSize: '15px',
@@ -189,18 +234,18 @@ const AuthPage = () => {
                         </div>
                     </div>
 
-                    <button 
-                        type="submit" 
+                    <button
+                        type="submit"
                         disabled={loading}
-                        style={{ 
-                            padding: '16px', 
-                            marginTop: '10px', 
-                            background: gradient, 
-                            color: 'white', 
-                            border: 'none', 
-                            borderRadius: '14px', 
-                            cursor: loading ? 'not-allowed' : 'pointer', 
-                            fontWeight: '800', 
+                        style={{
+                            padding: '16px',
+                            marginTop: '10px',
+                            background: gradient,
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '14px',
+                            cursor: loading ? 'not-allowed' : 'pointer',
+                            fontWeight: '800',
                             fontSize: '16px',
                             boxShadow: `0 12px 20px -5px ${isHod ? 'rgba(245,158,11,0.4)' : 'rgba(99,102,241,0.4)'}`,
                             transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
@@ -217,11 +262,11 @@ const AuthPage = () => {
                 <div style={{ marginTop: '32px' }}>
                     <p style={{ color: '#64748b', fontSize: '14px', fontWeight: '600' }}>
                         {isLoginMode ? "Don't have an account? " : "Already have an account? "}
-                        <span 
-                            onClick={() => { setIsLoginMode(!isLoginMode); setError(''); }} 
-                            style={{ 
-                                color: primaryColor, 
-                                cursor: 'pointer', 
+                        <span
+                            onClick={() => { setIsLoginMode(!isLoginMode); setError(''); }}
+                            style={{
+                                color: primaryColor,
+                                cursor: 'pointer',
                                 fontWeight: '800',
                                 marginLeft: '6px',
                                 textDecoration: 'underline',
@@ -236,4 +281,4 @@ const AuthPage = () => {
     );
 };
 
-export default AuthPage;
+export default AuthPage;

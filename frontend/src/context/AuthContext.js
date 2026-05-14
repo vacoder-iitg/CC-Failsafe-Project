@@ -16,13 +16,13 @@ export const AuthProvider = ({ children }) => {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ username, password, role })
         });
-        
+
         const data = await response.json();
-        if (!response.ok) throw new Error(data.detail); 
-        
+        if (!response.ok) throw new Error(data.detail);
+
         // 2. Create the user object
         const userData = { username: data.token, role: data.role, token: data.token };
-        
+
         // 3. Save to React state AND to the browser's permanent storage
         setUser(userData);
         localStorage.setItem('user', JSON.stringify(userData));
@@ -35,13 +35,13 @@ export const AuthProvider = ({ children }) => {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ username, password, role })
         });
-        
+
         const data = await response.json();
-        if (!response.ok) throw new Error(data.detail); 
-        
+        if (!response.ok) throw new Error(data.detail);
+
         // Auto-login after successful signup
         const userData = { username: username, role: role, token: username };
-        
+
         // Save to React state AND to the browser's permanent storage
         setUser(userData);
         localStorage.setItem('user', JSON.stringify(userData));

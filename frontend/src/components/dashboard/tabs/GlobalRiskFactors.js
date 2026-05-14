@@ -94,8 +94,19 @@ const GlobalRiskFactors = React.memo(({ classInsights, loadingInsights, user, sh
     }, [dpCache, lastFetchedKey, classInsights?.decision_plot_base64, dpError, dpLoading]);
 
     if (loadingInsights || !classInsights) {
-        return <div style={{ padding: '40px', textAlign: 'center', color: '#6b7280' }}>Loading model insights...</div>;
+        return (
+            <div style={{ padding: '60px 20px', textAlign: 'center', backgroundColor: 'white', borderRadius: '12px', border: '1px solid #e5e7eb', marginTop: '10px' }}>
+                <img 
+                    src="https://cdn.dribbble.com/users/980520/screenshots/2859415/monitoring.gif" 
+                    alt="AI Analysis" 
+                    style={{ width: '160px', marginBottom: '20px', borderRadius: '12px' }}
+                />
+                <h3 style={{ color: '#1e293b', margin: '0 0 10px 0' }}>Deep AI Global Analysis...</h3>
+                <p style={{ color: '#64748b', margin: 0, fontSize: '14px' }}>Connecting to ML models for global risk factor extraction.</p>
+            </div>
+        );
     }
+
 
     return (
         <div style={{ marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '24px' }}>

@@ -1,6 +1,6 @@
 import React from 'react';
 
-const Overview = ({ agg, teachers }) => {
+const Overview = ({ agg, facultyList }) => {
     const StatCard = ({ icon, label, value, color, bg }) => (
         <div style={{ flex: 1, minWidth: '180px', padding: '20px', backgroundColor: 'white', borderRadius: '12px', border: '1px solid #e5e7eb', borderTop: `3px solid ${color}`, boxShadow: '0 1px 4px rgba(0,0,0,0.05)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
@@ -39,7 +39,7 @@ const Overview = ({ agg, teachers }) => {
                             </tr>
                         </thead>
                         <tbody>
-                            {teachers.map(t => (
+                            {facultyList.map(t => (
                                 <tr key={t.teacher_name} style={{ borderBottom: '1px solid #f3f4f6' }}>
                                     <td style={{ padding: '12px 14px', fontWeight: '700', color: '#111827' }}>{t.teacher_name}</td>
                                     <td style={{ padding: '12px 14px', textAlign: 'center' }}>{t.total_students}</td>
@@ -56,12 +56,13 @@ const Overview = ({ agg, teachers }) => {
                         </tbody>
                     </table>
                 </div>
-                {teachers.length === 0 && (
+                {facultyList.length === 0 && (
                     <div style={{ padding: '40px', textAlign: 'center', color: '#9ca3af' }}>No faculty data found. Faculty members need to upload student CSV data first.</div>
                 )}
             </div>
         </div>
     );
 };
+
 
 export default Overview;

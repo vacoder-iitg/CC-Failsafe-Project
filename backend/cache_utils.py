@@ -43,3 +43,4 @@ def clear_teacher_cache(db: Session, teacher_id: str):
     # 2. Clear Persistent PostgreSQL Cache
     db.query(models.MLCache).filter(models.MLCache.teacher_id == teacher_id).delete()
     db.commit()
+

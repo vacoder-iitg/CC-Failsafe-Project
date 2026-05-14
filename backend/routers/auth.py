@@ -9,14 +9,14 @@ router = APIRouter()
 class UserAuth(BaseModel):
     username: str
     password: str
-    role: str = "Faculty"  # 'Faculty' or 'HoD'
+    role: str = "Teacher"  # 'Teacher' or 'HoD'
 
 @router.post("/signup")
 def create_user(user: UserAuth, db: Session = Depends(get_db)):
     existing_user = db.query(models.User).filter(models.User.username == user.username).first()
     if existing_user:
         raise HTTPException(status_code=400, detail="Username already exists. Please log in.")
-    role = user.role if user.role in ('Faculty', 'HoD') else 'Faculty'
+    role = user.role if user.role in ('Teacher', 'HoD') else 'Teacher'
     new_user = models.User(username=user.username, password=user.password, role=role)
     db.add(new_user)
     db.commit()
@@ -33,10 +33,10 @@ def login_user(user: UserAuth, db: Session = Depends(get_db)):
     
     # NEW: Verify role matches
     if db_user.role != user.role:
-        role_display = "Head of Department" if db_user.role == "HoD" else "Faculty"
+        role_display = "Head of Department" if db_user.role == "HoD" else "Teacher"
         raise HTTPException(
             status_code=403, 
             detail=f"Access Denied. This account is registered as {role_display}. Please select the correct role above."
         )
 
-    return {"token": db_user.username, "role": db_user.role or "Faculty"}
+    return {"token": db_user.username, "role": db_user.role or "Teacher"}

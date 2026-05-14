@@ -41,6 +41,7 @@ def get_class_insights(db: Session = Depends(get_db), teacher_id: str = Depends(
         return db_cached
 
     students = db.query(models.Student).filter(models.Student.teacher_id == teacher_id).all()
+
     if not students:
         return {"avg_g1": 0, "avg_g2": 0, "avg_pred_g3": 0, "avg_absences": 0, "shap_graph_base64": None, "metric_plots": {}}
     
@@ -155,6 +156,7 @@ def get_filtered_decision_plot(
         return {"plot": None, "title": "", "count": 0}
 
     all_students = db.query(models.Student).filter(models.Student.teacher_id == teacher_id).all()
+
     if not all_students:
         return {"plot": None, "title": "No students", "count": 0}
 
@@ -318,6 +320,7 @@ def get_metric_plot(feature_key: str, db: Session = Depends(get_db), teacher_id:
         return {"plot": None}
 
     students = db.query(models.Student).filter(models.Student.teacher_id == teacher_id).all()
+
     if not students:
         return {"plot": None}
 

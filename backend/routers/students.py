@@ -229,6 +229,7 @@ async def upload_csv(file: UploadFile = File(...), db: Session = Depends(get_db)
         db.commit()
         clear_teacher_cache(db, teacher_id)
         return {"message": f"Processed {len(new_students)} students for your vault."}
+
     except Exception as e:
         print(f"CSV Upload Error: {e}")
         raise HTTPException(status_code=500, detail=str(e))

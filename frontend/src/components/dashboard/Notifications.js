@@ -46,7 +46,7 @@ const Notifications = ({ notifications, unreadCount, markAllRead, user }) => {
                     {/* HoD Messages */}
                     {(() => {
                         const hodMsgs = JSON.parse(localStorage.getItem('failsafe_hod_messages') || '[]')
-                            .filter(m => m.toFaculty === user?.username);
+                            .filter(m => m.toTeacher === user?.username);
                         return hodMsgs.length > 0 && (
                             <>
                                 <div style={{ fontSize: '13px', fontWeight: '700', color: '#92400e', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>

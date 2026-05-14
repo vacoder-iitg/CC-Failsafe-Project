@@ -1,17 +1,17 @@
 import React, { useState } from 'react';
 
-const FacultyData = ({ teachers, user }) => {
-    const [expandedTeacher, setExpandedTeacher] = useState(null);
-    const [sentMessages, setSentMessages] = useState({}); // { 'teacher_actionKey': true }
+const FacultyData = ({ facultyList, user }) => {
+    const [expandedFaculty, setExpandedFaculty] = useState(null);
+    const [sentMessages, setSentMessages] = useState({}); // { 'facultyName_actionKey': true }
 
-    const sendHodMessage = (teacherName, msgType, msgLabel, msgDesc) => {
-        const key = `${teacherName}_${msgType}`;
+    const sendHodMessage = (facultyName, msgType, msgLabel, msgDesc) => {
+        const key = `${facultyName}_${msgType}`;
         if (sentMessages[key]) return;
         // Store in shared localStorage for faculty to read
         const existing = JSON.parse(localStorage.getItem('failsafe_hod_messages') || '[]');
         existing.unshift({
             id: Date.now(),
-            toFaculty: teacherName,
+            toFaculty: facultyName,
             fromHod: user?.username || 'HoD',
             msgType,
             msgLabel,
@@ -29,12 +29,12 @@ const FacultyData = ({ teachers, user }) => {
             <p style={{ color: '#6b7280', fontSize: '14px', marginBottom: '24px' }}>Click on a faculty member to expand their class metrics.</p>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {teachers.map(t => {
-                    const isExp = expandedTeacher === t.teacher_name;
+                {facultyList.map(t => {
+                    const isExp = expandedFaculty === t.teacher_name;
                     const riskColor = t.avg_risk_pct > 50 ? '#ef4444' : t.avg_risk_pct > 30 ? '#f59e0b' : '#10b981';
                     return (
                         <div key={t.teacher_name} style={{ backgroundColor: 'white', borderRadius: '10px', border: '1px solid #e5e7eb', borderLeft: `4px solid ${riskColor}`, overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.05)' }}>
-                            <div onClick={() => setExpandedTeacher(isExp ? null : t.teacher_name)} style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '16px 20px', cursor: 'pointer' }}
+                            <div onClick={() => setExpandedFaculty(isExp ? null : t.teacher_name)} style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '16px 20px', cursor: 'pointer' }}
                                 onMouseEnter={e => e.currentTarget.style.backgroundColor = '#fafbff'}
                                 onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
                             >
@@ -109,7 +109,7 @@ const FacultyData = ({ teachers, user }) => {
                         </div>
                     );
                 })}
-                {teachers.length === 0 && (
+                {facultyList.length === 0 && (
                     <div style={{ textAlign: 'center', padding: '60px', backgroundColor: 'white', borderRadius: '12px', border: '1px dashed #d1d5db' }}>
                         <p style={{ color: '#9ca3af', margin: 0 }}>No faculty data available.</p>
                     </div>
@@ -118,5 +118,6 @@ const FacultyData = ({ teachers, user }) => {
         </div>
     );
 };
+
 
 export default FacultyData;
