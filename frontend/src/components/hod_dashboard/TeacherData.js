@@ -11,7 +11,7 @@ const FacultyData = ({ facultyList, user }) => {
         const existing = JSON.parse(localStorage.getItem('failsafe_hod_messages') || '[]');
         existing.unshift({
             id: Date.now(),
-            toFaculty: facultyName,
+            toTeacher: facultyName,
             fromHod: user?.username || 'HoD',
             msgType,
             msgLabel,
