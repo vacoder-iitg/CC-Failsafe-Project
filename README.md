@@ -1,7 +1,7 @@
 <div align="center">
   
 # 🛡️ FAILSAFE 
-**AI-Powered Student Risk Prediction & Intervention Platform**
+**ML-Powered Student Risk Prediction & Intervention Platform**
 
 [![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi)](https://fastapi.tiangolo.com/)
 [![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://reactjs.org/)
@@ -16,7 +16,7 @@
 ---
 
 ## ✨ Features
-- **Deep AI Analysis:** XGBoost models predicting student performance and failure probability.
+- **ML Analysis:** XGBoost models predicting student performance and failure probability.
 - **Explainable AI (XAI):** Visual SHAP decision plots highlighting protective vs. risk-increasing factors.
 - **Role-Based Portals:** Dedicated, secure interfaces for Teachers/Faculty and Heads of Department (HoD).
 - **Secure Architecture:** Built with FastAPI, backed by PostgreSQL, and secured with JSON Web Tokens (JWT).
