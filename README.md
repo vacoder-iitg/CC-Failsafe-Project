@@ -33,23 +33,22 @@ Before you begin, ensure you have the following installed on your machine:
 
 ---
 
-## 🚀 Getting Started Guide
+##Starting Guide
 
 Follow these steps to configure, connect the database, and run the project locally using VS Code.
 
-### Step 1: Open the Project in VS Code
+### Step 1: After pulling the project from github open the Project in VS Code
 1. Open **Visual Studio Code**.
 2. Click `File` > `Open Folder...` and select the `FAILSAFE` project directory.
-3. Open a new terminal in VS Code by clicking `Terminal` > `New Terminal` or pressing `` Ctrl + ` ``.
-
 ---
 
 ### Step 2: Database Setup (PostgreSQL)
 Failsafe requires a PostgreSQL database to store users, cache heavy ML insights, and hold student records.
 
-1. Open **pgAdmin** (or your preferred PostgreSQL client).
-2. Create a new database named **`failsafe_db`**.
-3. *Note your postgres username and password.* (By default, the username is usually `postgres`).
+1. Open **pgAdmin4** (or your preferred PostgreSQL client).
+2. Create a new database named **`failsafe_db`**. <img width="1053" height="565" alt="image" src="https://github.com/user-attachments/assets/7bfcf417-cf97-4f02-a6e3-c335b56e2f22" /> once you created the database it will look like this directory.
+
+4. *Note your postgres username and password.* (By default, the username is usually `postgres`).
 
 ---
 
@@ -83,12 +82,15 @@ Failsafe requires a PostgreSQL database to store users, cache heavy ML insights,
    # Format: postgresql://username:password@localhost:5432/failsafe_db
    SQLALCHEMY_DATABASE_URL = "postgresql://postgres:YOUR_PASSWORD@127.0.0.1:5432/failsafe_db"
    ```
+   Also make sure you also do select PostgreSQL 18 in existing server <img width="980" height="569" alt="image" src="https://github.com/user-attachments/assets/38c15998-3760-4060-b918-0992c9a26694" /> as shown in image once after all connections.
+
 
 5. *(Optional)* **Load Initial Data:**
    If you have the `load_data.py` script and the `student-mat.csv` file ready, you can inject the data into your newly created database:
    ```bash
    python load_data.py
    ```
+   Note: There is one more option in faculty portal to upload csv of student this was only for development purpose.
 
 ---
 
@@ -106,7 +108,7 @@ Failsafe requires a PostgreSQL database to store users, cache heavy ML insights,
 
 ---
 
-## ⚡ Running the Application
+##  Running the Application
 
 To start the full stack, you need both the Backend and Frontend running simultaneously in separate VS Code terminals.
 
@@ -127,13 +129,10 @@ npm start
 
 ---
 
-## 🔐 Authentication
+##  Authentication
 Failsafe is secured via **JSON Web Tokens (JWT)**.
 - To access the dashboard, click **Sign Up** on the welcome screen to create an account.
 - Your credentials and session will be securely managed across the FastAPI backend and React context layer.
 
 ---
 
-<div align="center">
-  <i>Developed with ❤️ for educational excellence and intervention.</i>
-</div>
