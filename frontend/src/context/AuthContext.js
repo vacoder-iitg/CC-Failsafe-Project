@@ -20,8 +20,8 @@ export const AuthProvider = ({ children }) => {
         const data = await response.json();
         if (!response.ok) throw new Error(data.detail);
 
-        // 2. Create the user object
-        const userData = { username: data.token, role: data.role, token: data.token };
+        // 2. Create the user object using the explicit username from the backend
+        const userData = { username: data.username, role: data.role, token: data.token };
 
         // 3. Save to React state AND to the browser's permanent storage
         setUser(userData);
@@ -39,13 +39,13 @@ export const AuthProvider = ({ children }) => {
         const data = await response.json();
         if (!response.ok) throw new Error(data.detail);
 
-        // Auto-login after successful signup
-        const userData = { username: username, role: role, token: username };
+        // Auto-login after successful signup using the JWT provided by the backend
+        const userData = { username: data.username, role: data.role, token: data.token };
 
         // Save to React state AND to the browser's permanent storage
         setUser(userData);
         localStorage.setItem('user', JSON.stringify(userData));
-        localStorage.setItem('token', username);
+        localStorage.setItem('token', data.token);
     };
 
     const logout = () => {

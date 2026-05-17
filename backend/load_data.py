@@ -17,17 +17,14 @@ db = SessionLocal()
 print(f"Found {len(df)} students. Injecting ALL features into PostgreSQL...")
 
 for index, row in df.iterrows():
-    # Convert the pandas row to a dictionary
+
     student_data = row.to_dict()
-    
-    # Add our custom name field
+
     student_data['student_name'] = f"Student {index + 1}"
-    
-    # Unpack the dictionary directly into the SQLAlchemy model
     db_student = models.Student(**student_data)
     db.add(db_student)
 
 db.commit()
 db.close()
 
-print("Massive Success! All 33 Kaggle features are now in the database.")
+print("All the student data are loaded #check2")

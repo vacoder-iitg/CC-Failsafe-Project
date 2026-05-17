@@ -11,7 +11,7 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import threading
 #This is final push
-# Global lock to prevent Matplotlib thread collisions (which cause blank/vanished graphs)
+
 plt_lock = threading.Lock()
 
 import models

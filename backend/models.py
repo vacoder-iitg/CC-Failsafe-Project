@@ -55,5 +55,5 @@ class MLCache(Base):
     id = Column(Integer, primary_key=True, index=True)
     teacher_id = Column(String, index=True)
 
-    cache_key = Column(String, index=True) # e.g. "insights" or "dp_high"
-    data_json = Column(Text) # Stores the serialized JSON result (base64 graphs, etc.)
+    cache_key = Column(String, index=True) 
+    data_json = Column(Text)

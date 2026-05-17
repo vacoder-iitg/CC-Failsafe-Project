@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+﻿from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from database import engine
 import models
@@ -8,7 +8,7 @@ from routers import auth, students, class_insights, hod, admin
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    print("\n[STARTING] FAIL SAFE MULTI-TENANT ENGINE STARTING...")
+    print("\n[STARTING] Engine starting up")
     yield
 
 app = FastAPI(lifespan=lifespan)

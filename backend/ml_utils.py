@@ -34,11 +34,9 @@ FEATURE_LABELS = {
     'subject_por': 'Subject: Portuguese'
 }
 
-# All .pkl model files live in backend/models/
 MODELS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'models')
 
 def _model_path(filename: str) -> str:
-    """Return the absolute path to a model file inside backend/models/."""
     return os.path.join(MODELS_DIR, filename)
 
 try:
@@ -52,10 +50,10 @@ try:
         best_threshold = 0.5
 
     explainer = shap.TreeExplainer(model_clf)
-    print(f"[SUCCESS] ML Models Loaded. Features: {len(model_features)} | F1 Threshold: {best_threshold}")
+    print(f"[SUCCESS] ML models Loaded. Features: {len(model_features)} | F1 threshold: {best_threshold}")
 except Exception as e:
     model_clf, model_reg, model_features, explainer, best_threshold = None, None, None, None, 0.5
-    print(f"[ERROR] ML Models failed to load: {e}")
+    print(f"[ERROR] ML models failed to load: {e}")
 
 
 def get_risk_tier(prob, threshold=None):

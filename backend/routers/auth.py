@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from pydantic import BaseModel
 import models
 from dependencies import get_db
+import auth_utils
 
 router = APIRouter()
 
@@ -20,7 +21,17 @@ def create_user(user: UserAuth, db: Session = Depends(get_db)):
     new_user = models.User(username=user.username, password=user.password, role=role)
     db.add(new_user)
     db.commit()
-    return {"message": "Account created successfully!"}
+    # Generate JWT Token for auto-login
+    access_token = auth_utils.create_access_token(
+        data={"sub": new_user.username, "role": role}
+    )
+
+    return {
+        "message": "Account created successfully!",
+        "token": access_token,
+        "username": new_user.username,
+        "role": role
+    }
 
 @router.post("/login")
 def login_user(user: UserAuth, db: Session = Depends(get_db)):
@@ -31,7 +42,7 @@ def login_user(user: UserAuth, db: Session = Depends(get_db)):
     if db_user.password != user.password:
         raise HTTPException(status_code=401, detail="Incorrect password.")
     
-    # NEW: Verify role matches (Allow Faculty/Teacher interchangeably)
+    #Verify role matches (Allow Faculty/Teacher interchangeably)
     user_role = user.role
     db_role = db_user.role or "Faculty"
     
@@ -45,5 +56,14 @@ def login_user(user: UserAuth, db: Session = Depends(get_db)):
             detail=f"Access Denied. This account is registered as {role_display}. Please select the correct role above."
         )
 
-    return {"token": db_user.username, "role": db_role}
+    # Generate JWT Token
+    access_token = auth_utils.create_access_token(
+        data={"sub": db_user.username, "role": db_role}
+    )
+
+    return {
+        "token": access_token, 
+        "username": db_user.username, 
+        "role": db_role
+    }
 
