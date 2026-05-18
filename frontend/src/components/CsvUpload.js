@@ -9,7 +9,7 @@ const CsvUpload = ({ onUploadSuccess }) => {
 
     const handleUpload = async (e) => {
         e.preventDefault();
-        if (!file) return setStatus('⚠️ Please select a CSV file first.');
+        if (!file) return setStatus(' Please select a CSV file first.');
 
         const formData = new FormData();
         formData.append('file', file);
@@ -24,13 +24,13 @@ const CsvUpload = ({ onUploadSuccess }) => {
             });
             if (response.ok) {
                 const result = await response.json();
-                setStatus(`✅ ${result.message}`);
+                setStatus(` ${result.message}`);
                 if (onUploadSuccess) onUploadSuccess(); 
             } else {
-                setStatus('❌ Upload failed.');
+                setStatus(' Upload failed.');
             }
         } catch (error) {
-            setStatus('❌ Server Error.');
+            setStatus(' Server Error.');
         } finally {
             setIsUploading(false); 
         }
