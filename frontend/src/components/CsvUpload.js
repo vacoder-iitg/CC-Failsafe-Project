@@ -14,7 +14,7 @@ const CsvUpload = ({ onUploadSuccess }) => {
         const formData = new FormData();
         formData.append('file', file);
         setIsUploading(true);
-        setStatus('🚀 Securing and processing data...');
+        setStatus(' Securing and processing data...');
 
         try {
             const response = await fetch('http://localhost:8000/upload-csv/', {
@@ -45,7 +45,7 @@ const CsvUpload = ({ onUploadSuccess }) => {
                     {isUploading ? 'Processing...' : 'Run Secure Predictions'}
                 </button>
             </form>
-            {status && <p style={{ marginTop: '15px', marginBottom: 0, fontSize: '14px', fontWeight: 'bold', color: status.includes('✅') ? '#059669' : '#dc2626' }}>{status}</p>}
+            {status &&  <p style={{ marginTop: '15px', marginBottom: 0, fontSize: '14px', fontWeight: 'bold', color: status.includes('✅') ? '#059669' : '#dc2626' }}>{status}</p>}
         </div>
     );
 };
