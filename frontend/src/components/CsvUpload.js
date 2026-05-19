@@ -38,7 +38,7 @@ const CsvUpload = ({ onUploadSuccess }) => {
 
     return (
         <div style={{ marginTop: '20px', padding: '24px', backgroundColor: 'white', borderRadius: '8px', border: '1px solid #e5e7eb', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-            <h3 style={{ marginTop: 0, color: '#1f2937', marginBottom: '15px' }}>Upload Private Performance Data</h3>
+            <h3 style={{ marginTop: 0, color: '#1f2937',  marginBottom: '15px' }}>Upload Private Performance Data</h3>
             <form onSubmit={handleUpload} style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
                 <input type="file" accept=".csv" onChange={(e) => {setFile(e.target.files[0]); setStatus('');}} disabled={isUploading} style={{ padding: '8px', border: '1px solid #d1d5db', borderRadius: '4px', cursor: isUploading ? 'not-allowed' : 'pointer' }} />
                 <button type="submit" disabled={isUploading} style={{ padding: '10px 20px', backgroundColor: isUploading ? '#9ca3af' : '#10b981', color: 'white', border: 'none', borderRadius: '6px', cursor: isUploading ? 'not-allowed' : 'pointer', fontWeight: 'bold' }}>
