@@ -1,11 +1,11 @@
 <div align="center">
 
-# 🛡️ FAILSAFE 
+# FAILSAFE 
 **ML-Powered Student Risk Prediction & Intervention Platform**
 
 [![FAILSAFE Setup Video](https://img.youtube.com/vi/rP7cCDwSuz8/0.jpg)](https://youtu.be/rP7cCDwSuz8?si=yZtwcIJWfTSl4yRj)
-*Click the image above to watch the video for proper set-up.*
-or see here https://youtu.be/rP7cCDwSuz8?si=XXWA6YAOBKLBZCGb
+
+*Click the image above to watch the video for proper set-up, or [click here](https://youtu.be/rP7cCDwSuz8?si=XXWA6YAOBKLBZCGb) for the direct link.*
 
 [![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi)](https://fastapi.tiangolo.com/)
 [![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://reactjs.org/)
