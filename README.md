@@ -1,7 +1,10 @@
 <div align="center">
-  Watch this video for proper set-up: https://youtu.be/rP7cCDwSuz8?si=yZtwcIJWfTSl4yRj
+
 # 🛡️ FAILSAFE 
 **ML-Powered Student Risk Prediction & Intervention Platform**
+
+[![FAILSAFE Setup Video](https://img.youtube.com/vi/rP7cCDwSuz8/maxresdefault.jpg)](https://youtu.be/rP7cCDwSuz8?si=yZtwcIJWfTSl4yRj)
+*Click the image above to watch the video for proper set-up.*
 
 [![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi)](https://fastapi.tiangolo.com/)
 [![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://reactjs.org/)
