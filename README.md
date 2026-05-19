@@ -1,5 +1,5 @@
 <div align="center">
-  
+  Watch this video for proper set-up: https://youtu.be/rP7cCDwSuz8?si=yZtwcIJWfTSl4yRj
 # 🛡️ FAILSAFE 
 **ML-Powered Student Risk Prediction & Intervention Platform**
 
